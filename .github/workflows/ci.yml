@@ -7,7 +7,12 @@ on:
 jobs:
   build-test:
     runs-on: ubuntu-latest
+    env:
+      RATABLE_TEST_MONGO: mongodb://localhost:27017
     steps:
+      - uses: ankane/setup-mongodb@v1
+        with:
+          mongodb-version: '8.0'
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
@@ -15,6 +20,6 @@ jobs:
       - run: dotnet restore
       - run: dotnet build --no-restore -c Release
       - run: dotnet format --verify-no-changes --no-restore
-      # Integration tests start MongoDB with Testcontainers; the runner has Docker.
+      # Integration tests use the MongoDB service below through RATABLE_TEST_MONGO.
       - run: dotnet test --no-build -c Release tests/Api
       - run: dotnet run -c Release --project Coon.Payment.Tests

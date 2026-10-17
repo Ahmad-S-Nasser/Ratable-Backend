@@ -1,43 +1,36 @@
 using System.Net;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Testcontainers.MongoDb;
 
 namespace Ratable.Api.Tests;
 
-public sealed class HealthTests : IAsyncLifetime
+/// <summary>
+/// Tests that need a real MongoDB read its connection string from RATABLE_TEST_MONGO
+/// (for example mongodb://localhost:27017). No containers are used. They are skipped when it is not set.
+/// </summary>
+public sealed class HealthTests
 {
-    private readonly MongoDbContainer _mongo = new MongoDbBuilder("mongo:8.0").Build();
+    private const string Unreachable = "mongodb://127.0.0.1:1/?serverSelectionTimeoutMS=500";
+    private static readonly string? RealMongo = Environment.GetEnvironmentVariable("RATABLE_TEST_MONGO");
 
-    public Task InitializeAsync() => _mongo.StartAsync();
-    public Task DisposeAsync() => _mongo.DisposeAsync().AsTask();
-
-    private WebApplicationFactory<Program> Factory(string connectionString) =>
+    private static WebApplicationFactory<Program> Factory(string connectionString) =>
         new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
         {
             b.UseSetting("Mongo:ConnectionString", connectionString);
-            b.UseSetting("Mongo:Database", "ratable_tests");
+            b.UseSetting("Mongo:Database", $"ratable_tests_{Guid.NewGuid():N}");
         });
 
     [Fact]
     public async Task Health_answers_even_when_mongo_is_down()
     {
-        await using var factory = Factory("mongodb://127.0.0.1:1/?serverSelectionTimeoutMS=500");
+        await using var factory = Factory(Unreachable);
         var response = await factory.CreateClient().GetAsync("/health");
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task Ready_is_healthy_with_mongo()
-    {
-        await using var factory = Factory(_mongo.GetConnectionString());
-        var response = await factory.CreateClient().GetAsync("/health/ready");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     [Fact]
     public async Task Ready_is_unhealthy_without_mongo()
     {
-        await using var factory = Factory("mongodb://127.0.0.1:1/?serverSelectionTimeoutMS=500");
+        await using var factory = Factory(Unreachable);
         var response = await factory.CreateClient().GetAsync("/health/ready");
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
     }
@@ -45,9 +38,18 @@ public sealed class HealthTests : IAsyncLifetime
     [Fact]
     public async Task OpenApi_document_is_published()
     {
-        await using var factory = Factory(_mongo.GetConnectionString());
+        await using var factory = Factory(Unreachable);
         var response = await factory.CreateClient().GetAsync("/openapi/v1.json");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("\"openapi\"", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task Ready_is_healthy_with_mongo()
+    {
+        if (RealMongo is null) return; // needs a local MongoDB; see class summary
+        await using var factory = Factory(RealMongo);
+        var response = await factory.CreateClient().GetAsync("/health/ready");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 }

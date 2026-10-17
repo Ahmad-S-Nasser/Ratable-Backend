@@ -6,7 +6,7 @@ ASP.NET Core (.NET 10) modular monolith with MongoDB. Source of truth for rules 
 - `src/Api`: the HTTP API, the only place with business rules. Publishes OpenAPI at `/openapi/v1.json`.
 - `src/Shared`: shared database layer and helpers.
 - `src/Modules/<Name>`: Identity, Entities, Reviews, Comments, Verification, Moderation, Businesses, Insights, Contributions, Ai. Each exposes one `Add<Name>Module` method and talks to others only through interfaces.
-- `tests/Api`: xUnit tests; MongoDB comes from Testcontainers (needs Docker on the dev machine or CI runner only).
+- `tests/Api`: xUnit tests; tests that need MongoDB use a locally installed server named in RATABLE_TEST_MONGO (no Docker).
 - `Coon.Payment`, `Coon.Payment.Tests`: payment library (Kashier), used from phase 2.
 
 ## Run locally
