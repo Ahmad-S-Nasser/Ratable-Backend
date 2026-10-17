@@ -4,6 +4,7 @@ using Ratable.Modules.Reviews.Data;
 using Ratable.Modules.Reviews.Models;
 using Ratable.Modules.Reviews.Scoring;
 using Ratable.Shared.Catalog;
+using Ratable.Shared.Verification;
 
 namespace Ratable.Modules.Reviews.Services;
 
@@ -39,7 +40,8 @@ public sealed class ReviewService(
     ReviewRepository reviews,
     ReviewRevisionRepository revisions,
     IEntityCatalog catalog,
-    TimeProvider time)
+    TimeProvider time,
+    IEnumerable<IReviewDeletedHandler> deletedHandlers)
 {
     public const int MaxTextLength = 4000;
 
@@ -179,7 +181,9 @@ public sealed class ReviewService(
         current.Status = ReviewStatus.Deleted;
         current.DeletedAt = now;
         current.UpdatedAt = now;
-        return await reviews.TryReplaceAsync(current, expected, ct) ? new(ReviewFailure.None, current) : new(ReviewFailure.Conflict);
+        if (!await reviews.TryReplaceAsync(current, expected, ct)) return new(ReviewFailure.Conflict);
+        foreach (var handler in deletedHandlers) await handler.OnReviewDeletedAsync(current.Id, ct); // kept proof files go too
+        return new(ReviewFailure.None, current);
     }
 
     // ---- validation ----

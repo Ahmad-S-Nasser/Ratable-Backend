@@ -11,6 +11,6 @@ public sealed class ReviewContentDirectory(ReviewRepository reviews) : IContentD
     public async Task<ContentInfo?> GetAsync(string id, CancellationToken ct = default)
     {
         var review = await reviews.GetAsync(id, ct);
-        return review is null ? null : new ContentInfo(review.Id, review.UserId, review.IsAnonymous, review.Status == ReviewStatus.Published, review.CategoryId);
+        return review is null ? null : new ContentInfo(review.Id, review.UserId, review.IsAnonymous, review.Status == ReviewStatus.Published, review.CategoryId, review.EntityId, review.Status == ReviewStatus.Deleted);
     }
 }

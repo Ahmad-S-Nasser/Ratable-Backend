@@ -61,5 +61,11 @@ All AI goes through `IAiClient` (rule 2). It logs every call (model, tokens, cos
 - `POST /api/admin/anonymous-author-lookups` (Admin only): needs a written reason, writes the audit log BEFORE revealing anything (if that fails nothing is revealed), and never returns a phone number.
 - The leak test (`tests/Api/Anonymity/AnonymityLeakTests.cs`) scans every public endpoint, as a visitor and as a signed-in user, and the log, for the anonymous author's name, avatar, phone and account id. Add any new public endpoint to its `PublicUrls` list.
 
+## Evidence and proof (P7)
+- `POST /api/reviews/{id}/proof` (multipart: `file`, `proofType`, `declaration`, optional `retention=keep` with `keepConsent=true`) by the review's author. A clean proof (AI read it, name and date fine, file never seen before) is approved at once and the review becomes Verified; anything else, or an AI that is capped or down, goes to the moderator queue and the review stays Unverified. About 5 percent of approved proofs are also checked by a person.
+- `GET /api/moderation/proofs`, `GET .../{id}/file` (every opening is audited), `POST .../{id}/approve|reject` (a rejection needs a reason the author sees). `GET /api/me/proofs`, `DELETE /api/me/proofs/{id}/file` (author deletes a kept file; the badge stands on the recorded result).
+- Files are encrypted at rest in private storage (`Verification__StoragePath`, `Verification__StorageKey`), deleted right after the decision unless the author chose to keep them (separate consent, 12 months), deleted with the review, and removed hourly when due. Only the proof type, date, result and a one-way hash are kept for good.
+- Presence proof (live photo and location at the place) is an interface only (`IPresenceProofService`); the mobile app fills it in.
+
 ## Hosting on IIS
 See `docs/iis.md`.

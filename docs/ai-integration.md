@@ -30,7 +30,8 @@ public interface IAiProvider
     Task<AiProviderResponse> CompleteAsync(AiProviderRequest request, CancellationToken ct = default);
 }
 
-public sealed record AiProviderRequest(string Model, string? System, string Prompt, int MaxOutputTokens, string Effort);
+public sealed record AiProviderRequest(string Model, string? System, string Prompt, int MaxOutputTokens, string Effort, IReadOnlyList<AiAttachment>? Attachments = null);
+public sealed record AiAttachment(string ContentType, byte[] Data);   // Ratable.Shared.Ai
 public sealed record AiProviderResponse(string Text, long InputTokens, long OutputTokens, bool Truncated);
 public sealed class AiProviderException(string message, Exception? inner = null) : Exception(message, inner);
 ```
@@ -41,6 +42,7 @@ public sealed class AiProviderException(string message, Exception? inner = null)
 | `System`, `Prompt` | Instructions and the content to work on. For structured calls the backend appends a JSON Schema to `System` and asks for "a single JSON value that matches this schema and nothing else". |
 | `MaxOutputTokens` | Hard limit for the answer, including any reasoning. If you hit it, set `Truncated = true`; the backend treats a truncated answer as failed (and still counts its cost). |
 | `Effort` | `low`, `medium`, `high`, `max`: a hint for how much reasoning to spend. Optional to honour. |
+| `Attachments` | A document or image the model must look at (so far only the proof check sends one: a PDF, PNG, JPEG or WebP, up to 10 MB). Sent inline as bytes. Private data: a call with an attachment is never cached by the backend, and the service must not keep it. |
 | `Text` | The answer. For structured calls it must be JSON (code fences are tolerated). |
 | `InputTokens`, `OutputTokens` | Real counts. **Cost is computed from these**, so they must be honest and include any reasoning tokens. |
 
@@ -83,7 +85,7 @@ Volume, latency and cost are targets to confirm in section 8. Budget: about **US
 | 1 | `entity_duplicate_judge` | Entities, P4 | New place (names ar/en, alternates, city, address, fields) and up to 5 candidate places (id, names, name score, distance) | `{ "decision": "duplicate"\|"new"\|"unsure", "duplicateOfId": "<candidate id>"\|null, "confidence": 0..1 }` | Small | **Built.** Prompt in `DuplicateJudge.cs`. |
 | 2 | `moderation_prescreen` | Moderation, P8 | A new or edited review or comment (text, language, category) | verdicts for abuse, personal data (phone numbers, addresses, names of private people), spam, suspected fake, copied text; each with a flag, a short reason code and confidence; plus the model version | Small | Planned. Runs on every create and every edit. |
 | 3 | `contact_strip_check` | Moderation, P10a | Review text, captions, profile text of a locked profile | whether it contains a phone number, WhatsApp link or handle, and the spans to remove | Small | Planned. |
-| 4 | `proof_check` | Verification, P7 | Image or PDF of a receipt, contract, booking or similar; the entity name and expected proof types | `{ documentType, matchesEntity, date, dateInRange, legible, tamperingSuspected, confidence }` | Standard | Planned. Needs image/PDF input. The file is private and deleted after the decision unless the author keeps it. |
+| 4 | `proof_check` | Verification, P7 | Image or PDF of a receipt, contract, booking or similar (as an attachment); the expected place names, the category and the claimed proof type | `ProofReading`, see section 5 | Standard | **Built.** The file is private and deleted after the decision unless the author keeps it. A capped or failing AI sends the proof to a person. |
 | 5 | `video_frames` | Media, P9e | Sampled frames (not every frame) | per frame: faces (and whether a child), number plates, nudity, violence, text on screen; picture quality; best-frame score for the cover | Standard | Planned. Needs image input. |
 | 6 | `video_audio` | Media, P9e | The audio track | transcript (Arabic and English), abuse and personal-data flags; captions with timestamps | Standard | Planned. Needs audio input. |
 | 7 | Face and plate blurring, voice change | Media, P9e | Video | blurred/anonymised video | n/a | Decide: our own worker (ffmpeg and a detector) or your service. Rule: faces of children and number plates are always blurred; for an anonymous author every face is blurred and the voice changed, otherwise the video is refused. |
@@ -93,9 +95,11 @@ Volume, latency and cost are targets to confirm in section 8. Budget: about **US
 
 Rules that apply to every use case: a `Deferred` or `Failed` result is never treated as approval; every call is logged with its cost; calls carry an `itemReference` (id), never content, in the log.
 
-## 5. What the contract cannot carry yet (needs agreement)
+## 5. Media: what exists and what is still open
 
-The current `AiProviderRequest` is text only. Use cases 4 to 7 need media. Proposal: a second method or an extra `Attachments` list of private-storage references with short-lived signed URLs (the service fetches them; the backend never sends raw files inline for large media), returning the same `AiProviderResponse` plus structured JSON. This is a change to the backend interface, so agree it before P7 starts.
+- **Built (P7):** one document or image can travel with a request (`AiAttachment`, inline bytes). The first user is `proof_check` (use case 4). The backend asks for this JSON (`ProofReading`) and routes anything doubtful to a person:
+  `{ documentType, entityName, matchesEntity, matchesProofType, documentDate (yyyy-MM-dd or null), legible, tamperingSuspected, sensitiveDataVisible, confidence 0..1 }`. The instructions it sends are in `src/Modules/Verification/Services/ProofChecker.cs`. Expected place names are sent in the prompt in readable Arabic and English.
+- **Still open:** several frames or an audio track for video (use cases 5 and 6), and whether large media should be passed as short-lived signed URLs from private storage instead of inline bytes. Agree both before P9e starts.
 
 ## 6. Operations
 
@@ -137,4 +141,4 @@ The current `AiProviderRequest` is text only. Use cases 4 to 7 need media. Propo
 | Configuration (cap, tiers, prices) | `src/Modules/Ai/AiOptions.cs` and `appsettings.json` (`Ai`) |
 | Spend report | `GET /api/admin/ai/spend` (admin) |
 | Fakes for tests | `src/Modules/Ai/Providers/Fakes.cs` |
-| First real use (duplicate judge) | `src/Modules/Entities/Services/DuplicateJudge.cs` |
+| First real uses | `src/Modules/Entities/Services/DuplicateJudge.cs` (duplicate judge), `src/Modules/Verification/Services/ProofChecker.cs` (proof check) |

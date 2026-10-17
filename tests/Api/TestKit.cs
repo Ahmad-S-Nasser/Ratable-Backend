@@ -66,6 +66,31 @@ public static class TestKit
 
     public static string NewId() => ObjectId.GenerateNewId().ToString();
 
+    /// <summary>A tiny file that really is a PNG (by its first bytes). Different seeds give different files, so different hashes.</summary>
+    public static byte[] Png(int seed = 1) => [.. new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A }, .. System.Text.Encoding.ASCII.GetBytes($"fake image number {seed} for tests padding padding")];
+
+    public static byte[] Pdf(int seed = 1) => System.Text.Encoding.ASCII.GetBytes($"%PDF-1.4\n% fake pdf number {seed} for tests padding padding\n");
+
+    /// <summary>Posts a proof as a multipart form, the way the web and the app do.</summary>
+    public static async Task<(HttpResponseMessage Response, JsonElement Json)> UploadProof(
+        IdentityApiFactory api, string? cookie, string reviewId, byte[]? file, string? proofType = "lease_contract", bool declaration = true,
+        string? retention = null, bool? keepConsent = null, string fileName = "proof.png")
+    {
+        using var form = new MultipartFormDataContent();
+        if (file is not null) form.Add(new ByteArrayContent(file), "file", fileName);
+        if (proofType is not null) form.Add(new StringContent(proofType), "proofType");
+        form.Add(new StringContent(declaration ? "true" : "false"), "declaration");
+        if (retention is not null) form.Add(new StringContent(retention), "retention");
+        if (keepConsent is not null) form.Add(new StringContent(keepConsent.Value ? "true" : "false"), "keepConsent");
+
+        using var http = api.CreateClient();
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/reviews/{reviewId}/proof") { Content = form };
+        if (cookie is not null) request.Headers.Add("Cookie", cookie.Split(';')[0]);
+        var response = await http.SendAsync(request);
+        var text = await response.Content.ReadAsStringAsync();
+        return (response, text.TrimStart().StartsWith('{') ? JsonSerializer.Deserialize<JsonElement>(text) : default);
+    }
+
     public static async Task SetProfile(IdentityApiFactory api, string cookie, string? name, string? avatar = null)
     {
         var (response, _) = await Send(api, HttpMethod.Put, "/api/me/profile", cookie, new { displayName = name, avatarUrl = avatar });

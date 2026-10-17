@@ -92,7 +92,8 @@ public sealed class AiClient(
             return Finish(AiCallStatus.Failed, "model_not_priced");
         }
 
-        var cacheKey = request.Cacheable ? CacheKey(request, model, schema) : null;
+        // A request with an attachment is a private document: it is never cached.
+        var cacheKey = request.Cacheable && request.Attachments is not { Count: > 0 } ? CacheKey(request, model, schema) : null;
         if (cacheKey is not null && await cache.GetAsync(cacheKey, now, ct) is { } hit)
         {
             var (cachedValue, cachedError) = parse(hit.Text);
@@ -120,7 +121,7 @@ public sealed class AiClient(
             {
                 var effort = Opt.Effort.GetValueOrDefault(tier) ?? "low";
                 var system = schema is null ? request.System : JoinSystem(request.System, schema);
-                response = await provider.CompleteAsync(new AiProviderRequest(model, system, request.Prompt, maxOut, effort), ct);
+                response = await provider.CompleteAsync(new AiProviderRequest(model, system, request.Prompt, maxOut, effort, request.Attachments), ct);
             }
             catch (OperationCanceledException)
             {
@@ -177,7 +178,11 @@ public sealed class AiClient(
         lock (_gate) _reserved = Math.Max(0m, _reserved - amount);
     }
 
-    private static long EstimateInputTokens(AiRequest r) => ((r.Prompt.Length + (r.System?.Length ?? 0)) / 3) + 1;
+    // An attachment costs more than its text: reserve a generous fixed amount per document or image for the worst case.
+    private const long TokensPerAttachment = 4000;
+
+    private static long EstimateInputTokens(AiRequest r) =>
+        ((r.Prompt.Length + (r.System?.Length ?? 0)) / 3) + 1 + ((r.Attachments?.Count ?? 0) * TokensPerAttachment);
 
     private static string CacheKey(AiRequest r, string model, string? schema)
     {

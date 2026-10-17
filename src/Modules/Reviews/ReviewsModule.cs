@@ -7,6 +7,7 @@ using Ratable.Shared.Authors;
 using Ratable.Shared.Content;
 using Ratable.Shared.Data;
 using Ratable.Shared.Merge;
+using Ratable.Shared.Verification;
 
 namespace Ratable.Modules.Reviews;
 
@@ -21,6 +22,7 @@ public static class ReviewsModule
         services.AddSingleton<IEntityMergeParticipant, ReviewMergeParticipant>();
         services.AddSingleton<IContentDirectory, ReviewContentDirectory>();
         services.TryAddSingleton<IAuthorPresenter, AuthorPresenter>();
+        services.AddSingleton<IReviewVerifier, ReviewVerifier>();
         services.AddSingleton<ReviewService>();
         return services;
     }

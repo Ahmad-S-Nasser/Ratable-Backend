@@ -14,6 +14,8 @@ public sealed record DuplicateJudgement(string Decision, string? DuplicateOfId, 
 /// </summary>
 public sealed class DuplicateJudge(IAiClient ai)
 {
+    private static readonly JsonSerializerOptions PromptJson = new() { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+
     private const string Instructions =
         "You help moderators of a review platform for Egypt and the Gulf decide whether a newly submitted place or product is the same real-world " +
         "place or product as one of the candidates already listed. Names may be Arabic or English, with spelling variants or transliterations. " +
@@ -35,7 +37,7 @@ public sealed class DuplicateJudge(IAiClient ai)
         {
             submission = new { nameAr = entity.Name.Ar, nameEn = entity.Name.En, alternateNames = entity.AlternateNames, city = entity.City, address = entity.Address, entity.Fields },
             candidates = candidates.Select(c => new { id = c.EntityId, nameAr = c.Name.Ar, nameEn = c.Name.En, nameScore = c.NameScore, distanceMeters = c.DistanceMeters }),
-        });
+        }, PromptJson);
 
         var result = await ai.CompleteStructuredAsync<DuplicateJudgement>(new AiRequest
         {

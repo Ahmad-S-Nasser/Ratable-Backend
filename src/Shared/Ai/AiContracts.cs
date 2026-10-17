@@ -18,6 +18,9 @@ public enum AiStatus
     Failed,
 }
 
+/// <summary>A document or image sent along with the prompt (for example a proof of purchase). Private data: never logged, never cached.</summary>
+public sealed record AiAttachment(string ContentType, byte[] Data);
+
 public sealed record AiRequest
 {
     /// <summary>What the call is for, for example "moderation", "proof_check", "video_frames". Used to group spend.</summary>
@@ -32,6 +35,9 @@ public sealed record AiRequest
 
     /// <summary>Upper limit for the answer, including any thinking the model does.</summary>
     public int MaxOutputTokens { get; init; } = 2048;
+
+    /// <summary>Documents or images the model must look at. A call with attachments is never cached.</summary>
+    public IReadOnlyList<AiAttachment>? Attachments { get; init; }
 
     /// <summary>When true, an identical request (same feature, model, system, prompt) is answered from the stored result at no cost.</summary>
     public bool Cacheable { get; init; }

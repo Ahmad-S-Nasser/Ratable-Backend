@@ -1,6 +1,7 @@
 namespace Ratable.Shared.Catalog;
 
-public sealed record EntityRef(string Id, string CategoryId);
+/// <summary>A public entity. The names are public data, used for example to tell an AI which place a proof should be about.</summary>
+public sealed record EntityRef(string Id, string CategoryId, IReadOnlyList<string> Names);
 
 public enum CriterionKind { Rating5, Choice, YesNo }
 
@@ -9,7 +10,7 @@ public sealed record OptionInfo(string Value, int Score);
 
 public sealed record CriterionInfo(string Id, CriterionKind Kind, IReadOnlyList<OptionInfo> Options);
 
-public sealed record CategoryInfo(string Id, bool AnonymousByDefault, IReadOnlyList<CriterionInfo> Criteria);
+public sealed record CategoryInfo(string Id, bool AnonymousByDefault, IReadOnlyList<CriterionInfo> Criteria, IReadOnlyList<string> AcceptedProofTypes);
 
 /// <summary>
 /// What other modules (Reviews first) may know about entities and categories, without touching the Entities module's collections.

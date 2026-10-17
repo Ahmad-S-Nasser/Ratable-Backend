@@ -12,7 +12,7 @@ public interface IAiProvider
     Task<AiProviderResponse> CompleteAsync(AiProviderRequest request, CancellationToken cancellationToken = default);
 }
 
-public sealed record AiProviderRequest(string Model, string? System, string Prompt, int MaxOutputTokens, string Effort);
+public sealed record AiProviderRequest(string Model, string? System, string Prompt, int MaxOutputTokens, string Effort, IReadOnlyList<AiAttachment>? Attachments = null);
 
 public sealed record AiProviderResponse(string Text, long InputTokens, long OutputTokens, bool Truncated);
 

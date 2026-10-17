@@ -11,6 +11,7 @@ public static class Collections
     public const string OtpChallenges = "otp_challenges";
     public const string Sessions = "sessions";
     public const string Verifications = "verifications";
+    public const string Consents = "consents";
     public const string Comments = "comments";
     public const string ContributionEvents = "contribution_events";
     public const string Reports = "reports";

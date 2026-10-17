@@ -10,7 +10,7 @@ public sealed class EntityCatalog(EntityRepository entities, CategoryRepository 
     {
         if (!MongoDB.Bson.ObjectId.TryParse(entityId, out _)) return null;
         var entity = await entities.GetAsync(entityId, ct);
-        return entity is { Status: EntityStatus.Active } ? new EntityRef(entity.Id, entity.CategoryId) : null;
+        return entity is { Status: EntityStatus.Active } ? new EntityRef(entity.Id, entity.CategoryId, [.. EntityService.AllNames(entity)]) : null;
     }
 
     public async Task<CategoryInfo?> GetCategoryAsync(string categoryId, CancellationToken ct = default)
@@ -20,6 +20,6 @@ public sealed class EntityCatalog(EntityRepository entities, CategoryRepository 
         return new CategoryInfo(category.Id, category.AnonymousByDefault, [.. category.Criteria.Select(c => new CriterionInfo(
             c.Id,
             c.AnswerType switch { AnswerType.Choice => CriterionKind.Choice, AnswerType.YesNo => CriterionKind.YesNo, _ => CriterionKind.Rating5 },
-            [.. c.Options.Select(o => new OptionInfo(o.Value, o.Score))]))]);
+            [.. c.Options.Select(o => new OptionInfo(o.Value, o.Score))]))], [.. category.AcceptedProofTypes]);
     }
 }
