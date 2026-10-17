@@ -141,10 +141,10 @@ public static class ReviewEndpoints
     };
 
     private static async Task<IResult> List(
-        string entityId, int? limit, int? skip, ReviewRepository repository, IEntityCatalog catalog, IAuthorPresenter authors, CancellationToken ct)
+        string entityId, int? limit, int? skip, string? sort, bool? verified, ReviewRepository repository, IEntityCatalog catalog, IAuthorPresenter authors, CancellationToken ct)
     {
         if (await catalog.GetActiveEntityAsync(entityId, ct) is null) return Results.NotFound();
-        var found = await repository.ListPublishedAsync(entityId, Math.Clamp(limit ?? 20, 1, 50), Math.Max(0, skip ?? 0), ct);
+        var found = await repository.ListPublishedAsync(entityId, Math.Clamp(limit ?? 20, 1, 50), Math.Max(0, skip ?? 0), sort, verified == true, ct);
         return Results.Ok(await ToPublic(found, authors, ct));
     }
 

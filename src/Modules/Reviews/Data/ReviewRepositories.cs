@@ -30,8 +30,23 @@ public sealed class ReviewRepository(IMongoDatabase database) : MongoRepository<
 
     /// <summary>Published reviews of an entity, newest first, for the public list.</summary>
     public async Task<List<Review>> ListPublishedAsync(string entityId, int limit = 50, int skip = 0, CancellationToken ct = default) =>
-        await Collection.Find(r => r.EntityId == entityId && r.Status == ReviewStatus.Published)
-            .SortByDescending(r => r.CreatedAt).ThenByDescending(r => r.Id).Skip(skip).Limit(limit).ToListAsync(ct);
+        await ListPublishedAsync(entityId, limit, skip, null, false, ct);
+
+    /// <summary>Published reviews, optionally only Verified ones, newest first (default), or by their own overall score highest or lowest first.</summary>
+    public async Task<List<Review>> ListPublishedAsync(string entityId, int limit, int skip, string? sort, bool verifiedOnly, CancellationToken ct = default)
+    {
+        var find = Collection.Find(r => r.EntityId == entityId && r.Status == ReviewStatus.Published && (!verifiedOnly || r.Verification.Level == VerificationLevel.Verified));
+        if (sort is "highest" or "lowest")
+        {
+            // The overall of a review is the average of its answers, worked out here because it is not stored.
+            var all = await find.ToListAsync(ct);
+            var ordered = sort == "highest"
+                ? all.OrderByDescending(r => Scoring.ScoreCalculator.ReviewOverall(r.Answers) ?? 0).ThenByDescending(r => r.CreatedAt)
+                : all.OrderBy(r => Scoring.ScoreCalculator.ReviewOverall(r.Answers) ?? 0).ThenByDescending(r => r.CreatedAt);
+            return [.. ordered.Skip(skip).Take(limit)];
+        }
+        return await find.SortByDescending(r => r.CreatedAt).ThenByDescending(r => r.Id).Skip(skip).Limit(limit).ToListAsync(ct);
+    }
 
     /// <summary>Only the fields the score needs, for the reviews that may count (Published and Verified).</summary>
     public async Task<List<Review>> ListScoringAsync(string entityId, CancellationToken ct = default) =>

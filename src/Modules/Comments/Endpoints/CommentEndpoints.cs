@@ -27,14 +27,14 @@ public static class CommentEndpoints
     {
         var onReview = app.MapGroup("/api/reviews/{reviewId}/comments").WithTags("Comments");
         onReview.MapGet("", List).Produces<List<PublicComment>>().Produces(404);
-        onReview.MapPost("", Create).RequireAuthorization(PolicyNames.SignedIn);
+        onReview.MapPost("", Create).RequireAuthorization(PolicyNames.SignedIn).Produces<OwnComment>(201).Produces<ErrorBody>(400).Produces<ErrorBody>(404).Produces<ErrorBody>(429);
 
         var comments = app.MapGroup("/api/comments").WithTags("Comments").RequireAuthorization(PolicyNames.SignedIn);
         comments.MapPut("/{id}", Edit);
         comments.MapPut("/{id}/anonymity", SetAnonymity);
         comments.MapDelete("/{id}", Delete);
 
-        app.MapGet("/api/me/comments", Mine).WithTags("Comments").RequireAuthorization(PolicyNames.SignedIn);
+        app.MapGet("/api/me/comments", Mine).WithTags("Comments").RequireAuthorization(PolicyNames.SignedIn).Produces<List<OwnComment>>();
         return app;
     }
 

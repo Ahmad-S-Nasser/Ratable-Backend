@@ -29,9 +29,9 @@ public static class VerificationEndpoints
     {
         // The upload is a multipart form posted with the session cookie (SameSite=Lax, so other sites cannot post it). Anti-forgery tokens for web forms
         // are tracked as an open decision for the web build.
-        app.MapPost("/api/reviews/{reviewId}/proof", Upload).WithTags("Verification").RequireAuthorization(PolicyNames.SignedIn).DisableAntiforgery();
-        app.MapGet("/api/me/proofs", Mine).WithTags("Verification").RequireAuthorization(PolicyNames.SignedIn);
-        app.MapDelete("/api/me/proofs/{id}/file", DeleteMyFile).WithTags("Verification").RequireAuthorization(PolicyNames.SignedIn);
+        app.MapPost("/api/reviews/{reviewId}/proof", Upload).WithTags("Verification").RequireAuthorization(PolicyNames.SignedIn).DisableAntiforgery().Produces<OwnProof>(201).Produces<ErrorBody>(400).Produces<ErrorBody>(404).Produces<ErrorBody>(409);
+        app.MapGet("/api/me/proofs", Mine).WithTags("Verification").RequireAuthorization(PolicyNames.SignedIn).Produces<List<OwnProof>>();
+        app.MapDelete("/api/me/proofs/{id}/file", DeleteMyFile).WithTags("Verification").RequireAuthorization(PolicyNames.SignedIn).Produces(204).Produces<ErrorBody>(404).Produces<ErrorBody>(409);
 
         var queue = app.MapGroup("/api/moderation/proofs").WithTags("Moderation").RequireAuthorization(PolicyNames.Moderator);
         queue.MapGet("", ListQueue).Produces<List<QueueProof>>();
