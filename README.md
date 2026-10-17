@@ -26,5 +26,13 @@ dotnet run --project Coon.Payment.Tests
 ## Configuration
 Environment variables only; no secrets in the repository. Nested keys use a double underscore: `Mongo__ConnectionString`, `Mongo__Database`. `appsettings.json` holds defaults only.
 
+## Sign-in (P2)
+Phone number + one-time code. `POST /api/auth/otp/request`, `POST /api/auth/otp/verify` (`client` is `web` for an httpOnly cookie, `app` for a bearer token), `POST /api/auth/logout`, `GET /api/me`, `PUT /api/me/profile`, `PUT /api/admin/users/{id}/roles` (Admin). Signing in never sets `PhoneVerified`; only the WhatsApp verifier (P9h) does.
+
+Required environment variables (generate each with 32 random bytes, base64):
+- `Identity__PhoneEncryptionKey`, `Identity__PhoneHashKey`
+- `Identity__OtpSender=console` in development prints codes to the console; without it the sender refuses to send until a real provider is added.
+- Optional: `Identity__BlockedPhonePrefixes__0=+1555`, `Identity__BootstrapAdminPhone` (the first admin; clear it once an admin exists).
+
 ## Hosting on IIS
 See `docs/iis.md`.

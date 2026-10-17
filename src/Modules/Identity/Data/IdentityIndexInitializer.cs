@@ -31,5 +31,24 @@ public sealed class IdentityIndexInitializer : IIndexInitializer
                         new BsonDocument("logins.provider", new BsonDocument("$type", "string"))),
                 }),
         ], ct);
+
+        var otp = database.GetCollection<OtpChallenge>(Collections.OtpChallenges);
+        var o = Builders<OtpChallenge>.IndexKeys;
+        await otp.Indexes.CreateManyAsync(
+        [
+            new CreateIndexModel<OtpChallenge>(o.Ascending(c => c.PhoneHash).Descending(c => c.CreatedAt), new CreateIndexOptions { Name = "phone_created" }),
+            new CreateIndexModel<OtpChallenge>(o.Ascending(c => c.IpHash).Descending(c => c.CreatedAt), new CreateIndexOptions { Name = "ip_created" }),
+            // Old challenges are removed a day after they expire; they are only needed for rate limits.
+            new CreateIndexModel<OtpChallenge>(o.Ascending(c => c.ExpiresAt), new CreateIndexOptions { Name = "expires_ttl", ExpireAfter = TimeSpan.FromDays(1) }),
+        ], ct);
+
+        var sessions = database.GetCollection<Session>(Collections.Sessions);
+        var s = Builders<Session>.IndexKeys;
+        await sessions.Indexes.CreateManyAsync(
+        [
+            new CreateIndexModel<Session>(s.Ascending(x => x.TokenHash), new CreateIndexOptions { Name = "token_hash_unique", Unique = true }),
+            new CreateIndexModel<Session>(s.Ascending(x => x.UserId), new CreateIndexOptions { Name = "user" }),
+            new CreateIndexModel<Session>(s.Ascending(x => x.ExpiresAt), new CreateIndexOptions { Name = "expires_ttl", ExpireAfter = TimeSpan.Zero }),
+        ], ct);
     }
 }
