@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <!--
+      Nullable is ENABLED here, unlike RafeeqyNotes.Api which disables it.
+
+      That is not an inconsistency to tidy up later. The API disables it because switching it on
+      would raise hundreds of warnings across eighteen legacy repositories and make any diff
+      unreviewable. This project has no legacy, and it is the one piece of the system that is
+      meant to be lifted into other codebases — where "can this be null" is exactly the question
+      a consumer will have and should not have to answer by reading the source.
+
+      A nullable-enabled library consumed by a nullable-disabled project is fine: the annotations
+      are metadata, and nothing propagates into the API's build.
+    -->
+    <Nullable>enable</Nullable>
+
+    <!--
+      Opted out of the host solution's central package management. This library ships its own pinned versions
+      (see the PackageReferences below) precisely so it stays portable into other codebases unmodified — coupling
+      its versions to Directory.Packages.props here would defeat that.
+    -->
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+
+    <!--
+      Packable so this can be reused the honest way. Referenced by path today; `dotnet pack`
+      produces a NuGet package the moment a second system needs it, with no code changes.
+    -->
+    <IsPackable>true</IsPackable>
+    <PackageId>Coon.Payment</PackageId>
+    <Version>1.0.0</Version>
+    <Description>Provider-neutral payment checkout and webhook verification. Knows nothing about any particular product's billing model.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      Deliberately minimal. Options/DI/logging abstractions only - no ASP.NET Core, no MongoDB,
+      no HTTP client stack beyond what the BCL provides. A payment library that drags a web
+      framework in with it cannot be reused by a worker service or a console tool.
+    -->
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.2" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,20 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - run: dotnet restore
+      - run: dotnet build --no-restore -c Release
+      - run: dotnet format --verify-no-changes --no-restore
+      # Integration tests start MongoDB with Testcontainers; the runner has Docker.
+      - run: dotnet test --no-build -c Release tests/Api
+      - run: dotnet run -c Release --project Coon.Payment.Tests

@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Coon.Payment.Tests</RootNamespace>
+
+    <!--
+      A plain console app, not xunit. The repository has no test runner, no CI and no test
+      conventions to match, and adding a framework here would mean adding one to a solution that
+      cannot run it. This project runs with `dotnet run`, exits non-zero on failure, and needs
+      nothing installed - which is what makes it usable both here and in whatever system reuses
+      the library next.
+    -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Coon.Payment\Coon.Payment.csproj" />
+  </ItemGroup>
+
+</Project>

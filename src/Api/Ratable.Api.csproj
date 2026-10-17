@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <NoDefaultLaunchSettingsFile>True</NoDefaultLaunchSettingsFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.13" />
+    <PackageReference Include="Microsoft.OpenApi" Version="2.12.2" />
+    <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Shared\Ratable.Shared.csproj" />
+    <ProjectReference Include="..\Modules\Ai\Ratable.Modules.Ai.csproj" />
+    <ProjectReference Include="..\Modules\Businesses\Ratable.Modules.Businesses.csproj" />
+    <ProjectReference Include="..\Modules\Comments\Ratable.Modules.Comments.csproj" />
+    <ProjectReference Include="..\Modules\Contributions\Ratable.Modules.Contributions.csproj" />
+    <ProjectReference Include="..\Modules\Entities\Ratable.Modules.Entities.csproj" />
+    <ProjectReference Include="..\Modules\Identity\Ratable.Modules.Identity.csproj" />
+    <ProjectReference Include="..\Modules\Insights\Ratable.Modules.Insights.csproj" />
+    <ProjectReference Include="..\Modules\Moderation\Ratable.Modules.Moderation.csproj" />
+    <ProjectReference Include="..\Modules\Reviews\Ratable.Modules.Reviews.csproj" />
+    <ProjectReference Include="..\Modules\Verification\Ratable.Modules.Verification.csproj" />
+  </ItemGroup>
+
+</Project>
