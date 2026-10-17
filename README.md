@@ -41,5 +41,11 @@ All AI goes through `IAiClient` (rule 2). It logs every call (model, tokens, cos
 - `GET /api/admin/ai/spend` (Admin) shows spend today and this month, by feature.
 - Tests use `FakeAiClient` (other modules) or `FakeAiProvider` (the client itself). No test calls a real model.
 
+## Entities and Arabic matching (P4)
+- `ArabicNormalizer` and `Slugger` (src/Shared/Text) are the only place text is normalized for matching, search and slugs; originals are never changed.
+- Adding an entity: `POST /api/entities` (signed in). It is checked for duplicate candidates (normalized-name score of at least `Entities:CandidateThreshold`, within `Entities:DuplicateRadiusMeters`), the AI judge gives a suggestion, and it always waits in the moderator queue (`GET /api/moderation/entities`; `POST .../{id}/approve`, `/reject`, `/merge`). With the AI capped or failing, a person decides without a suggestion.
+- Merging a duplicate into another entity is described on `EntityService.MergeAsync`: other modules move their data through `IEntityMergeParticipant`, a clash stops the merge, every step can be repeated, and the old id redirects (301) to the survivor.
+- Public reads: `GET /api/entities/{id}` and `GET /api/entities/search?q=` (active entities only, nothing about the submitter).
+
 ## Hosting on IIS
 See `docs/iis.md`.

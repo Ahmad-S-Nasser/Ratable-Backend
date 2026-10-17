@@ -20,6 +20,8 @@ public sealed class EntitiesIndexInitializer : IIndexInitializer
                 new CreateIndexOptions { Name = "names_text", DefaultLanguage = "none" }),
             new CreateIndexModel<Entity>(k.Ascending(e => e.CategoryId).Ascending(e => e.Status), new CreateIndexOptions { Name = "category_status" }),
             new CreateIndexModel<Entity>(k.Descending(e => e.UpdatedAt), new CreateIndexOptions { Name = "updated" }),
+            new CreateIndexModel<Entity>(k.Ascending(e => e.Status).Ascending(e => e.CreatedAt), new CreateIndexOptions { Name = "status_created" }),
+            new CreateIndexModel<Entity>(k.Ascending(e => e.SubmittedByUserId).Descending(e => e.CreatedAt), new CreateIndexOptions { Name = "submitter_created" }),
             new CreateIndexModel<Entity>(k.Ascending(e => e.GooglePlaceId),
                 new CreateIndexOptions<Entity>
                 {

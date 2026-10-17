@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Ratable.Modules.Verification.Data;
 using Ratable.Shared.Data;
+using Ratable.Shared.Merge;
 
 namespace Ratable.Modules.Verification;
 
@@ -11,6 +12,7 @@ public static class VerificationModule
     {
         services.AddSingleton<VerificationRepository>();
         services.AddIndexInitializer<VerificationIndexInitializer>();
+        services.AddSingleton<IEntityMergeParticipant, VerificationMergeParticipant>();
         return services;
     }
 }

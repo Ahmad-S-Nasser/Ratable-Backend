@@ -7,7 +7,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
 using MongoDB.Driver;
 using Ratable.Api.Tests.Data;
+using Ratable.Modules.Ai.Providers;
 using Ratable.Modules.Identity.Services;
+using Ratable.Shared.Ai;
 
 namespace Ratable.Api.Tests.Identity;
 
@@ -30,13 +32,18 @@ public sealed class CapturingOtpSender : IOtpSender
 public sealed class IdentityApiFactory : WebApplicationFactory<Program>
 {
     public CapturingOtpSender Sender { get; } = new();
+
+    /// <summary>Replaces IAiClient when the factory is created with fakeAi: true. No test calls a real model.</summary>
+    public FakeAiClient Ai { get; } = new();
+    private readonly bool _fakeAi;
     public FakeTimeProvider Time { get; } = new(DateTimeOffset.UtcNow);
     public string DatabaseName { get; } = $"ratable_tests_{Guid.NewGuid():N}";
     private readonly Dictionary<string, string> _settings;
 
-    public IdentityApiFactory(Dictionary<string, string>? settings = null)
+    public IdentityApiFactory(Dictionary<string, string>? settings = null, bool fakeAi = false)
     {
         _settings = settings ?? [];
+        _fakeAi = fakeAi;
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -51,6 +58,7 @@ public sealed class IdentityApiFactory : WebApplicationFactory<Program>
         {
             services.AddSingleton<IOtpSender>(Sender);
             services.AddSingleton<TimeProvider>(Time);
+            if (_fakeAi) services.AddSingleton<IAiClient>(Ai);
         });
     }
 

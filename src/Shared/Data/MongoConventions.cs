@@ -19,6 +19,8 @@ public static class MongoConventions
                 new CamelCaseElementNameConvention(),
                 new EnumRepresentationConvention(BsonType.String),
                 new IgnoreExtraElementsConvention(true),
+                // Unset fields are left out of the document, so sparse and partial indexes (geo, unique ids) skip them.
+                new IgnoreIfNullConvention(true),
             }, _ => true);
             _registered = true;
         }

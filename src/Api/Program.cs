@@ -5,6 +5,7 @@ using Ratable.Modules.Businesses;
 using Ratable.Modules.Comments;
 using Ratable.Modules.Contributions;
 using Ratable.Modules.Entities;
+using Ratable.Modules.Entities.Endpoints;
 using Ratable.Modules.Identity;
 using Ratable.Modules.Identity.Endpoints;
 using Ratable.Modules.Insights;
@@ -46,6 +47,7 @@ app.UseAuthorization();
 
 app.MapIdentityEndpoints();
 app.MapAiEndpoints();
+app.MapEntityEndpoints();
 
 app.MapOpenApi("/openapi/{documentName}.json");
 
