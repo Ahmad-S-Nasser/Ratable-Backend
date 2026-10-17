@@ -29,6 +29,8 @@ builder.Host.UseSerilog((ctx, services, cfg) => cfg
     .Enrich.FromLogContext()
     .WriteTo.Console());
 
+// Numbers must be JSON numbers (not strings): it keeps the API contract, and the generated TypeScript types, exact.
+builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.Strict);
 builder.Services.AddOpenApi();
 builder.Services.AddRatableMongo(builder.Configuration);
 builder.Services

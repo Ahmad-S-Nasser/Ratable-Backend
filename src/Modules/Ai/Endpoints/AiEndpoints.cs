@@ -28,7 +28,8 @@ public static class AiEndpoints
             return new SpendResponse(now, cap, Math.Max(0m, cap - today.CostUsd), today, month);
         })
         .WithTags("Admin")
-        .RequireAuthorization(PolicyNames.Admin);
+        .RequireAuthorization(PolicyNames.Admin)
+        .Produces<SpendResponse>();
         return app;
     }
 

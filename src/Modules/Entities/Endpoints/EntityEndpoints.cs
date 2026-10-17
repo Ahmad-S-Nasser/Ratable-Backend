@@ -46,10 +46,10 @@ public static class EntityEndpoints
         entities.MapPost("", Submit).RequireAuthorization(PolicyNames.SignedIn);
 
         var queue = app.MapGroup("/api/moderation/entities").WithTags("Moderation").RequireAuthorization(PolicyNames.Moderator);
-        queue.MapGet("", ListQueue);
-        queue.MapPost("/{id}/approve", Approve);
-        queue.MapPost("/{id}/reject", Reject);
-        queue.MapPost("/{id}/merge", Merge);
+        queue.MapGet("", ListQueue).Produces<List<QueueItem>>();
+        queue.MapPost("/{id}/approve", Approve).Produces<SubmittedResponse>();
+        queue.MapPost("/{id}/reject", Reject).Produces<SubmittedResponse>();
+        queue.MapPost("/{id}/merge", Merge).Produces<SubmittedResponse>();
         return app;
     }
 

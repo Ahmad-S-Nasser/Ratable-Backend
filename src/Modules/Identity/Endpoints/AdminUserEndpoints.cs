@@ -21,9 +21,9 @@ public static class AdminUserEndpoints
     public static IEndpointRouteBuilder MapAdminUserEndpoints(this IEndpointRouteBuilder app)
     {
         var admin = app.MapGroup("/api/admin/users").WithTags("Admin").RequireAuthorization(PolicyNames.Admin);
-        admin.MapGet("", List);
-        admin.MapPost("/{id}/suspend", Suspend);
-        admin.MapPost("/{id}/unsuspend", Unsuspend);
+        admin.MapGet("", List).Produces<AdminUserPage>();
+        admin.MapPost("/{id}/suspend", Suspend).Produces(StatusCodes.Status204NoContent);
+        admin.MapPost("/{id}/unsuspend", Unsuspend).Produces(StatusCodes.Status204NoContent);
         return app;
     }
 

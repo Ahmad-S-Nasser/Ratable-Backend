@@ -27,16 +27,16 @@ public static class AuthEndpoints
     public static IEndpointRouteBuilder MapIdentityEndpoints(this IEndpointRouteBuilder app)
     {
         var auth = app.MapGroup("/api/auth").WithTags("Auth");
-        auth.MapPost("/otp/request", RequestOtp);
-        auth.MapPost("/otp/verify", VerifyOtp);
-        auth.MapPost("/logout", Logout);
+        auth.MapPost("/otp/request", RequestOtp).Produces<OtpRequestedResponse>(StatusCodes.Status202Accepted);
+        auth.MapPost("/otp/verify", VerifyOtp).Produces<SignedInWebResponse>();
+        auth.MapPost("/logout", Logout).Produces(StatusCodes.Status204NoContent);
 
         var me = app.MapGroup("/api/me").WithTags("Me").RequireAuthorization(RatableAuth.Policies.SignedIn);
-        me.MapGet("", GetMe);
-        me.MapPut("/profile", UpdateProfile);
+        me.MapGet("", GetMe).Produces<MeResponse>();
+        me.MapPut("/profile", UpdateProfile).Produces<MeResponse>();
 
         app.MapPut("/api/admin/users/{id}/roles", SetRoles)
-            .WithTags("Admin").RequireAuthorization(RatableAuth.Policies.Admin);
+            .WithTags("Admin").RequireAuthorization(RatableAuth.Policies.Admin).Produces<MeResponse>();
         return app;
     }
 

@@ -39,21 +39,21 @@ public static class ModerationEndpoints
 {
     public static IEndpointRouteBuilder MapModerationEndpoints(this IEndpointRouteBuilder app)
     {
-        app.MapPost("/api/reports", Report).WithTags("Moderation").RequireAuthorization(PolicyNames.SignedIn);
-        app.MapPost("/api/reviews/{id}/disputes", RaiseDispute).WithTags("Moderation").RequireAuthorization(PolicyNames.BusinessOwner);
-        app.MapPost("/api/admin/anonymous-author-lookups", Lookup).WithTags("Admin").RequireAuthorization(PolicyNames.Admin);
-        app.MapGet("/api/admin/audit", Audit).WithTags("Admin").RequireAuthorization(PolicyNames.Admin);
+        app.MapPost("/api/reports", Report).WithTags("Moderation").RequireAuthorization(PolicyNames.SignedIn).Produces<ReportedResponse>(StatusCodes.Status201Created);
+        app.MapPost("/api/reviews/{id}/disputes", RaiseDispute).WithTags("Moderation").RequireAuthorization(PolicyNames.BusinessOwner).Produces<ReportedResponse>(StatusCodes.Status201Created);
+        app.MapPost("/api/admin/anonymous-author-lookups", Lookup).WithTags("Admin").RequireAuthorization(PolicyNames.Admin).Produces<LookupResponse>();
+        app.MapGet("/api/admin/audit", Audit).WithTags("Admin").RequireAuthorization(PolicyNames.Admin).Produces<AuditPage>();
 
         var mod = app.MapGroup("/api/moderation").WithTags("Moderation").RequireAuthorization(PolicyNames.Moderator);
-        mod.MapGet("/overview", GetOverview);
-        mod.MapGet("/cases", ListCases);
-        mod.MapPost("/cases/{id}/publish", PublishCase);
-        mod.MapPost("/cases/{id}/hide", HideCase);
-        mod.MapGet("/reports", ListReports);
-        mod.MapPost("/reports/{id}/resolve", ResolveReport);
-        mod.MapGet("/disputes", ListDisputes);
-        mod.MapPost("/disputes/{id}/uphold", UpholdDispute);
-        mod.MapPost("/disputes/{id}/dismiss", DismissDispute);
+        mod.MapGet("/overview", GetOverview).Produces<Overview>();
+        mod.MapGet("/cases", ListCases).Produces<CasePage>();
+        mod.MapPost("/cases/{id}/publish", PublishCase).Produces<CaseDto>();
+        mod.MapPost("/cases/{id}/hide", HideCase).Produces<CaseDto>();
+        mod.MapGet("/reports", ListReports).Produces<List<ReportGroup>>();
+        mod.MapPost("/reports/{id}/resolve", ResolveReport).Produces(StatusCodes.Status204NoContent);
+        mod.MapGet("/disputes", ListDisputes).Produces<List<DisputeDto>>();
+        mod.MapPost("/disputes/{id}/uphold", UpholdDispute).Produces(StatusCodes.Status204NoContent);
+        mod.MapPost("/disputes/{id}/dismiss", DismissDispute).Produces(StatusCodes.Status204NoContent);
         return app;
     }
 

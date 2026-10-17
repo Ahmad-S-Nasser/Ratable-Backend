@@ -34,10 +34,10 @@ public static class VerificationEndpoints
         app.MapDelete("/api/me/proofs/{id}/file", DeleteMyFile).WithTags("Verification").RequireAuthorization(PolicyNames.SignedIn);
 
         var queue = app.MapGroup("/api/moderation/proofs").WithTags("Moderation").RequireAuthorization(PolicyNames.Moderator);
-        queue.MapGet("", ListQueue);
-        queue.MapGet("/{id}/file", OpenFile);
-        queue.MapPost("/{id}/approve", Approve);
-        queue.MapPost("/{id}/reject", Reject);
+        queue.MapGet("", ListQueue).Produces<List<QueueProof>>();
+        queue.MapGet("/{id}/file", OpenFile).Produces(StatusCodes.Status200OK, contentType: "application/octet-stream");
+        queue.MapPost("/{id}/approve", Approve).Produces<OwnProof>();
+        queue.MapPost("/{id}/reject", Reject).Produces<OwnProof>();
         return app;
     }
 
