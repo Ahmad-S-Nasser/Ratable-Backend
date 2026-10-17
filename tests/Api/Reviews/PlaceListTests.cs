@@ -15,8 +15,12 @@ public sealed class PlaceListTests
     {
         await api.Services.GetRequiredService<ReviewRepository>().InsertAsync(new Review
         {
-            EntityId = entityId, UserId = ObjectId.GenerateNewId().ToString(), CategoryId = "compounds", Status = status,
-            Verification = new ReviewVerification { Level = level }, Answers = [new ReviewAnswer { CriterionId = "security", Score = score }],
+            EntityId = entityId,
+            UserId = ObjectId.GenerateNewId().ToString(),
+            CategoryId = "compounds",
+            Status = status,
+            Verification = new ReviewVerification { Level = level },
+            Answers = [new ReviewAnswer { CriterionId = "security", Score = score }],
         });
     }
 
