@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Ratable.Modules.Identity.Models;
 using Ratable.Modules.Identity.Services;
+using Ratable.Shared.Auth;
 
 namespace Ratable.Modules.Identity.Auth;
 
@@ -17,10 +18,10 @@ public static class RatableAuth
 
     public static class Policies
     {
-        public const string SignedIn = "SignedIn";
-        public const string Moderator = "Moderator";
-        public const string Admin = "Admin";
-        public const string BusinessOwner = "BusinessOwner";
+        public const string SignedIn = PolicyNames.SignedIn;
+        public const string Moderator = PolicyNames.Moderator;
+        public const string Admin = PolicyNames.Admin;
+        public const string BusinessOwner = PolicyNames.BusinessOwner;
     }
 
     public static void AddPolicies(AuthorizationOptions options)

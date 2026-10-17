@@ -15,4 +15,6 @@ public static class Collections
     public const string ContributionEvents = "contribution_events";
     public const string Reports = "reports";
     public const string AuditLog = "audit_log";
+    public const string AiCalls = "ai_calls";
+    public const string AiCache = "ai_cache";
 }

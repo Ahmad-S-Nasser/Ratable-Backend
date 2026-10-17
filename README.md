@@ -34,5 +34,12 @@ Required environment variables (generate each with 32 random bytes, base64):
 - `Identity__OtpSender=console` in development prints codes to the console; without it the sender refuses to send until a real provider is added.
 - Optional: `Identity__BlockedPhonePrefixes__0=+1555`, `Identity__BootstrapAdminPhone` (the first admin; clear it once an admin exists).
 
+## AI (P3)
+All AI goes through `IAiClient` (rule 2). It logs every call (model, tokens, cost, feature, item id; never the prompt or the answer) to `ai_calls`, enforces `Ai:DailyCapUsd` per UTC day and returns `Deferred` when the cap is hit (the caller sends the item to the human queue and never publishes it). Calls also fail visibly (`Failed`) when no provider is set, the model has no price, the provider errors or the output is invalid.
+- `Ai__Provider=anthropic` and `Ai__Anthropic__ApiKey` (or `ANTHROPIC_API_KEY`). Without them every call returns `Failed: provider_not_configured`.
+- Tiers map to models in `Ai:Models` (Small = claude-haiku-5-5, Standard = claude-sonnet-5-5). Every model needs a price in `Ai:Prices` (US dollars per million tokens); check these against the current price list.
+- `GET /api/admin/ai/spend` (Admin) shows spend today and this month, by feature.
+- Tests use `FakeAiClient` (other modules) or `FakeAiProvider` (the client itself). No test calls a real model.
+
 ## Hosting on IIS
 See `docs/iis.md`.

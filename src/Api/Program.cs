@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Ratable.Modules.Ai;
+using Ratable.Modules.Ai.Endpoints;
 using Ratable.Modules.Businesses;
 using Ratable.Modules.Comments;
 using Ratable.Modules.Contributions;
@@ -44,6 +45,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapIdentityEndpoints();
+app.MapAiEndpoints();
 
 app.MapOpenApi("/openapi/{documentName}.json");
 
