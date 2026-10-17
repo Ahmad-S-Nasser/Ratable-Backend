@@ -1,7 +1,12 @@
+using Ratable.Shared.Data;
+
 namespace Ratable.Shared.Catalog;
 
 /// <summary>A public entity. The names are public data, used for example to tell an AI which place a proof should be about.</summary>
 public sealed record EntityRef(string Id, string CategoryId, IReadOnlyList<string> Names);
+
+/// <summary>What a listing needs to show about a public entity.</summary>
+public sealed record CatalogEntry(string Id, string CategoryId, LocalizedText Name, IReadOnlyDictionary<string, string> Slugs, string? City, string? Address);
 
 public enum CriterionKind { Rating5, Choice, YesNo }
 
@@ -22,6 +27,9 @@ public interface IEntityCatalog
 {
     /// <summary>The entity, only if it is public (Active). Pending, rejected, hidden and merged entities return null.</summary>
     Task<EntityRef?> GetActiveEntityAsync(string entityId, CancellationToken cancellationToken = default);
+
+    /// <summary>Public entities of an active category, for listings. Empty when the category is unknown or inactive.</summary>
+    Task<IReadOnlyList<CatalogEntry>> ListActiveByCategoryAsync(string categoryId, int limit, CancellationToken cancellationToken = default);
 
     /// <summary>The category's criteria, only if the category is active.</summary>
     Task<CategoryInfo?> GetCategoryAsync(string categoryId, CancellationToken cancellationToken = default);

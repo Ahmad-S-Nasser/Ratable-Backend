@@ -13,6 +13,13 @@ public sealed class EntityCatalog(EntityRepository entities, CategoryRepository 
         return entity is { Status: EntityStatus.Active } ? new EntityRef(entity.Id, entity.CategoryId, [.. EntityService.AllNames(entity)]) : null;
     }
 
+    public async Task<IReadOnlyList<CatalogEntry>> ListActiveByCategoryAsync(string categoryId, int limit, CancellationToken ct = default)
+    {
+        if (await categories.GetAsync(categoryId, ct) is not { Active: true }) return [];
+        var found = await entities.ListByCategoryAsync(categoryId, limit, ct);
+        return [.. found.Select(e => new CatalogEntry(e.Id, e.CategoryId, e.Name, e.Slugs, e.City, e.Address))];
+    }
+
     public async Task<CategoryInfo?> GetCategoryAsync(string categoryId, CancellationToken ct = default)
     {
         var category = await categories.GetAsync(categoryId, ct);

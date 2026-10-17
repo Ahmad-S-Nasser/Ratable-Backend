@@ -9,6 +9,7 @@ using Ratable.Modules.Reviews.Services;
 using Ratable.Shared.Auth;
 using Ratable.Shared.Authors;
 using Ratable.Shared.Catalog;
+using Ratable.Shared.Data;
 
 namespace Ratable.Modules.Reviews.Endpoints;
 
@@ -39,6 +40,11 @@ public sealed record OwnReview(
 public sealed record CriterionScoreDto(string CriterionId, int Answers, double? Score);
 public sealed record ScoreResponse(double? Overall, int VerifiedReviews, int PublishedReviews, int MinAnswersForCriterion, List<CriterionScoreDto> Criteria);
 
+/// <summary>A place in a category listing: its verified score and how many verified reviews that is built from. Nothing here depends on payment.</summary>
+public sealed record PlaceCard(string Id, LocalizedText Name, Dictionary<string, string> Slugs, string? City, double? Overall, int VerifiedReviews);
+
+public sealed record PlaceList(List<PlaceCard> Places, int Total);
+
 public static class ReviewEndpoints
 {
     public static IEndpointRouteBuilder MapReviewEndpoints(this IEndpointRouteBuilder app)
@@ -54,8 +60,32 @@ public static class ReviewEndpoints
         reviews.MapPut("/{id}/anonymity", SetAnonymity).RequireAuthorization(PolicyNames.SignedIn);
         reviews.MapDelete("/{id}", Delete).RequireAuthorization(PolicyNames.SignedIn);
 
+        app.MapGet("/api/categories/{categoryId}/places", Places).WithTags("Reviews").Produces<PlaceList>().Produces(404);
         app.MapGet("/api/me/reviews", Mine).WithTags("Reviews").RequireAuthorization(PolicyNames.SignedIn);
         return app;
+    }
+
+    /// <summary>
+    /// The places of a category ranked by verified score first, then by number of verified reviews, then by name; places with no verified score come
+    /// last. Nothing paid changes the order (rule 6). Scores are worked out per request over at most 500 places; storing them is a later optimisation.
+    /// </summary>
+    private static async Task<IResult> Places(string categoryId, int? limit, int? skip, string? lang, ReviewRepository repository, IEntityCatalog catalog, CancellationToken ct)
+    {
+        if (await catalog.GetCategoryAsync(categoryId, ct) is null) return Results.NotFound();
+        var entries = await catalog.ListActiveByCategoryAsync(categoryId, 500, ct);
+        var reviews = (await repository.ListScoringForEntitiesAsync([.. entries.Select(e => e.Id)], ct)).ToLookup(r => r.EntityId);
+        var key = lang == "en" ? "en" : "ar";
+        var ranked = entries
+            .Select(e =>
+            {
+                var score = ScoreCalculator.ForEntity(reviews[e.Id]);
+                return new PlaceCard(e.Id, e.Name, new Dictionary<string, string>(e.Slugs), e.City, score.Overall, score.VerifiedReviewCount);
+            })
+            .OrderByDescending(p => p.Overall.HasValue).ThenByDescending(p => p.Overall).ThenByDescending(p => p.VerifiedReviews)
+            .ThenBy(p => key == "en" ? p.Name.En ?? p.Name.Ar : p.Name.Ar ?? p.Name.En, StringComparer.CurrentCulture)
+            .ToList();
+        var page = ranked.Skip(Math.Max(0, skip ?? 0)).Take(Math.Clamp(limit ?? 20, 1, 50)).ToList();
+        return Results.Ok(new PlaceList(page, ranked.Count));
     }
 
     private static string UserId(ClaimsPrincipal p) => p.FindFirstValue(ClaimTypes.NameIdentifier)!;

@@ -39,6 +39,12 @@ public sealed class ReviewRepository(IMongoDatabase database) : MongoRepository<
             .Project<Review>(Builders<Review>.Projection.Include(r => r.Answers).Include(r => r.Status).Include(r => r.Verification))
             .ToListAsync(ct);
 
+    /// <summary>The answers of every counting review (Published and Verified) of several entities at once, for listings.</summary>
+    public async Task<List<Review>> ListScoringForEntitiesAsync(IReadOnlyCollection<string> entityIds, CancellationToken ct = default) =>
+        await Collection.Find(r => entityIds.Contains(r.EntityId) && r.Status == ReviewStatus.Published && r.Verification.Level == VerificationLevel.Verified)
+            .Project<Review>(Builders<Review>.Projection.Include(r => r.EntityId).Include(r => r.Answers).Include(r => r.Status).Include(r => r.Verification))
+            .ToListAsync(ct);
+
     public Task<long> CountPublishedAsync(string entityId, CancellationToken ct = default) =>
         Collection.CountDocumentsAsync(r => r.EntityId == entityId && r.Status == ReviewStatus.Published, cancellationToken: ct);
 
