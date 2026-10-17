@@ -5,6 +5,13 @@ using Ratable.Shared.Data;
 
 namespace Ratable.Modules.Moderation;
 
+// P8 will add the moderation entry point here and route each new review by User.PhoneVerified,
+// the automatic check result and Category.RatesIndividuals (rule 18):
+//  - verified phone, review without proof, checks pass, not an individual: publish without a human queue;
+//  - anything the checks flag: moderator first;
+//  - every review of an individual (Category.RatesIndividuals): moderator first;
+//  - unverified phone, review without proof: moderator first.
+// Until then ReviewStatus.PendingModeration stays the default. Verification never changes a score.
 public static class ModerationModule
 {
     public static IServiceCollection AddModerationModule(this IServiceCollection services, IConfiguration configuration)
