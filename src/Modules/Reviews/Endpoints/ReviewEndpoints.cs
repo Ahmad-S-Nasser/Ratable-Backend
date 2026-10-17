@@ -52,19 +52,19 @@ public static class ReviewEndpoints
     public static IEndpointRouteBuilder MapReviewEndpoints(this IEndpointRouteBuilder app)
     {
         var onEntity = app.MapGroup("/api/entities/{entityId}").WithTags("Reviews");
-        onEntity.MapPost("/reviews", Create).RequireAuthorization(PolicyNames.SignedIn);
+        onEntity.MapPost("/reviews", Create).RequireAuthorization(PolicyNames.SignedIn).Produces<OwnReview>(201).Produces<ErrorBody>(400).Produces<ErrorBody>(404).Produces(409);
         onEntity.MapGet("/reviews", List).Produces<List<PublicReview>>().Produces(404);
         onEntity.MapGet("/score", Score).Produces<ScoreResponse>().Produces(404);
 
         var reviews = app.MapGroup("/api/reviews").WithTags("Reviews");
         reviews.MapGet("/{id}/history", History).Produces<ReviewHistory>().Produces(404);
-        reviews.MapPut("/{id}", Edit).RequireAuthorization(PolicyNames.SignedIn);
-        reviews.MapPut("/{id}/anonymity", SetAnonymity).RequireAuthorization(PolicyNames.SignedIn);
+        reviews.MapPut("/{id}", Edit).RequireAuthorization(PolicyNames.SignedIn).Produces<OwnReview>().Produces<ErrorBody>(400).Produces<ErrorBody>(404).Produces(409);
+        reviews.MapPut("/{id}/anonymity", SetAnonymity).RequireAuthorization(PolicyNames.SignedIn).Produces<OwnReview>().Produces<ErrorBody>(400).Produces<ErrorBody>(404);
         reviews.MapDelete("/{id}", Delete).RequireAuthorization(PolicyNames.SignedIn);
 
         app.MapGet("/api/categories/{categoryId}/places", Places).WithTags("Reviews").Produces<PlaceList>().Produces(404);
         app.MapGet("/api/sitemap/places", SitemapPlaces).WithTags("Reviews").Produces<List<SitemapPlace>>();
-        app.MapGet("/api/me/reviews", Mine).WithTags("Reviews").RequireAuthorization(PolicyNames.SignedIn);
+        app.MapGet("/api/me/reviews", Mine).WithTags("Reviews").RequireAuthorization(PolicyNames.SignedIn).Produces<List<OwnReview>>();
         return app;
     }
 
