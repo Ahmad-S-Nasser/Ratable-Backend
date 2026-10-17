@@ -458,8 +458,13 @@ public sealed class ReviewApiTests
         Assert.False(list[unverified.Id].GetProperty("verified").GetBoolean());
         Assert.DoesNotContain(verified.UserId, text);
         Assert.DoesNotContain(unverified.UserId, text);
-        foreach (var forbidden in new[] { "userId", "isAnonymous", "author", "status" })
+        foreach (var forbidden in new[] { "userId", "isAnonymous", "status" })
             Assert.DoesNotContain($"\"{forbidden}\"", text, StringComparison.OrdinalIgnoreCase);
+        Assert.All(list.Values, r =>
+        {
+            Assert.True(r.GetProperty("anonymous").GetBoolean()); // these authors have no public name
+            Assert.Equal(JsonValueKind.Null, r.GetProperty("author").ValueKind);
+        });
     }
 
     [MongoFact]

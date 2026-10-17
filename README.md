@@ -53,5 +53,13 @@ All AI goes through `IAiClient` (rule 2). It logs every call (model, tokens, cos
 - Public: `GET /api/entities/{id}/reviews`, `GET /api/entities/{id}/score`, `GET /api/reviews/{id}/history`, `GET /api/categories[/{id}]`. Public review responses carry no author at all until the anonymity work (P6) adds one behind the leak test.
 - Score rules (`ScoreCalculator`): only Published and Verified reviews count; a review's overall is the average of its answered criteria; the entity's overall is the average of those, every review weighing the same; a per-criterion score appears only after 5 answers.
 
+## Anonymity and comments (P6)
+- Every review and comment stores its real author and an anonymous flag. Every public response is built by `IAuthorPresenter` (src/Shared/Authors): an anonymous item gets no author and its author's profile is never looked up. An author who is "named" but has no public display name is shown as anonymous.
+- `PUT /api/reviews/{id}/anonymity` and `PUT /api/comments/{id}/anonymity` switch the flag at any time. It is not a content change (no revision, no re-moderation), and because the flag lives on the review and never on a revision, one switch covers the current version and the whole history.
+- Comments: `POST/GET /api/reviews/{id}/comments`, `PUT/DELETE /api/comments/{id}`, `GET /api/me/comments`. One level deep, start as PendingModeration, an edit sets an "edited" label and returns them to moderation, they never touch a score.
+- `POST /api/reports` (review or comment; one report per reader per item; never hides anything by itself).
+- `POST /api/admin/anonymous-author-lookups` (Admin only): needs a written reason, writes the audit log BEFORE revealing anything (if that fails nothing is revealed), and never returns a phone number.
+- The leak test (`tests/Api/Anonymity/AnonymityLeakTests.cs`) scans every public endpoint, as a visitor and as a signed-in user, and the log, for the anonymous author's name, avatar, phone and account id. Add any new public endpoint to its `PublicUrls` list.
+
 ## Hosting on IIS
 See `docs/iis.md`.

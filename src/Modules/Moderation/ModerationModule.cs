@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Ratable.Modules.Moderation.Data;
+using Ratable.Modules.Moderation.Services;
 using Ratable.Shared.Audit;
 using Ratable.Shared.Data;
 
@@ -23,6 +24,9 @@ public static class ModerationModule
         services.AddIndexInitializer<ModerationIndexInitializer>();
         services.TryAddSingleton(TimeProvider.System);
         services.AddSingleton<IAuditLog, AuditLogService>();
+        services.Configure<ModerationOptions>(configuration.GetSection(ModerationOptions.Section));
+        services.AddSingleton<ReportService>();
+        services.AddSingleton<AnonymousAuthorLookupService>();
         return services;
     }
 }

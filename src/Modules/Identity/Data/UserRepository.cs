@@ -18,6 +18,12 @@ public sealed class UserRepository(IMongoDatabase database) : MongoRepository<Us
     public async Task<User?> GetByLoginAsync(string provider, string subject, CancellationToken ct = default) =>
         await Collection.Find(u => u.Logins.Any(l => l.Provider == provider && l.Subject == subject)).FirstOrDefaultAsync(ct);
 
+    public async Task<List<User>> ListByIdsAsync(IReadOnlyCollection<string> ids, CancellationToken ct = default)
+    {
+        var valid = ids.Where(i => MongoDB.Bson.ObjectId.TryParse(i, out _)).ToList();
+        return valid.Count == 0 ? [] : await Collection.Find(u => valid.Contains(u.Id)).ToListAsync(ct);
+    }
+
     public Task ReplaceAsync(User user, CancellationToken ct = default) =>
         Collection.ReplaceOneAsync(u => u.Id == user.Id, user, cancellationToken: ct);
 }

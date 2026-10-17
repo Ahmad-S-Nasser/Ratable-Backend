@@ -103,8 +103,12 @@ public sealed class ReviewService(
         if (content.Failure != ReviewFailure.None) return new(content.Failure, Detail: content.Detail);
         var anonymous = input.IsAnonymous ?? current.IsAnonymous;
 
-        if (current.Status != ReviewStatus.Deleted && SameContent(current, content, anonymous))
-            return new(ReviewFailure.None, current); // nothing changed: no new revision
+        if (current.Status != ReviewStatus.Deleted && SameContent(current, content))
+        {
+            // Nothing in the content changed: no new revision and no new moderation. Only the anonymity switch may differ.
+            if (anonymous == current.IsAnonymous) return new(ReviewFailure.None, current);
+            return await SetAnonymityAsync(userId, reviewId, anonymous, ct);
+        }
 
         var now = time.GetUtcNow().UtcDateTime;
         var revision = new ReviewRevision
@@ -141,6 +145,24 @@ public sealed class ReviewService(
 
         if (!await reviews.TryReplaceAsync(current, expected, ct)) return new(ReviewFailure.Conflict);
         return new(ReviewFailure.None, current);
+    }
+
+    // ---- the anonymity switch ----
+
+    /// <summary>
+    /// Switches a review between named and anonymous. The flag lives on the review only, never on a revision, and every public response is
+    /// built from it when it is asked for, so one switch applies to the current version and to every earlier version at once. It is not a
+    /// content change: no revision, no new moderation and the edited-on date stays as it was.
+    /// </summary>
+    public async Task<ReviewResult> SetAnonymityAsync(string userId, string reviewId, bool isAnonymous, CancellationToken ct = default)
+    {
+        var current = await reviews.GetAsync(reviewId, ct);
+        if (current is null || current.UserId != userId) return new(ReviewFailure.NotFound);
+        if (current.IsAnonymous == isAnonymous) return new(ReviewFailure.None, current);
+
+        var expected = current.RevisionNumber;
+        current.IsAnonymous = isAnonymous;
+        return await reviews.TryReplaceAsync(current, expected, ct) ? new(ReviewFailure.None, current) : new(ReviewFailure.Conflict);
     }
 
     // ---- delete ----
@@ -221,8 +243,7 @@ public sealed class ReviewService(
         return arabic * 3 > letters.Count ? "ar" : "en";
     }
 
-    private static bool SameContent(Review current, Content content, bool anonymous) =>
-        current.IsAnonymous == anonymous &&
+    private static bool SameContent(Review current, Content content) =>
         current.Text == content.Text &&
         current.Language == content.Language &&
         current.Answers.Count == content.Answers!.Count &&

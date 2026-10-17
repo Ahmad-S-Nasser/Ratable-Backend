@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
+using Serilog.Core;
+using Serilog.Events;
 using MongoDB.Driver;
 using Ratable.Api.Tests.Data;
 using Ratable.Modules.Ai.Providers;
@@ -28,10 +30,25 @@ public sealed class CapturingOtpSender : IOtpSender
     public string LastCode(string phoneE164) => Sent.Last(s => s.Phone == phoneE164).Code;
 }
 
+/// <summary>Keeps every log line the API writes (message and properties), so a test can check what was logged.</summary>
+public sealed class CapturingLogSink : ILogEventSink
+{
+    private readonly List<string> _lines = [];
+    public IReadOnlyList<string> Lines { get { lock (_lines) return [.. _lines]; } }
+
+    public void Emit(LogEvent logEvent)
+    {
+        var line = logEvent.RenderMessage() + " " + string.Join(' ', logEvent.Properties.Select(p => $"{p.Key}={p.Value}")) + (logEvent.Exception?.ToString() ?? "");
+        lock (_lines) _lines.Add(line);
+    }
+}
+
 /// <summary>The API on a throwaway database, with a fake clock and a capturing OTP sender.</summary>
 public sealed class IdentityApiFactory : WebApplicationFactory<Program>
 {
     public CapturingOtpSender Sender { get; } = new();
+    public CapturingLogSink Logs { get; } = new();
+    private readonly Action<IServiceCollection>? _configure;
 
     /// <summary>Replaces IAiClient when the factory is created with fakeAi: true. No test calls a real model.</summary>
     public FakeAiClient Ai { get; } = new();
@@ -40,8 +57,9 @@ public sealed class IdentityApiFactory : WebApplicationFactory<Program>
     public string DatabaseName { get; } = $"ratable_tests_{Guid.NewGuid():N}";
     private readonly Dictionary<string, string> _settings;
 
-    public IdentityApiFactory(Dictionary<string, string>? settings = null, bool fakeAi = false)
+    public IdentityApiFactory(Dictionary<string, string>? settings = null, bool fakeAi = false, Action<IServiceCollection>? configure = null)
     {
+        _configure = configure;
         _settings = settings ?? [];
         _fakeAi = fakeAi;
     }
@@ -59,6 +77,8 @@ public sealed class IdentityApiFactory : WebApplicationFactory<Program>
             services.AddSingleton<IOtpSender>(Sender);
             services.AddSingleton<TimeProvider>(Time);
             if (_fakeAi) services.AddSingleton<IAiClient>(Ai);
+            services.AddSingleton<ILogEventSink>(Logs);
+            _configure?.Invoke(services);
         });
     }
 

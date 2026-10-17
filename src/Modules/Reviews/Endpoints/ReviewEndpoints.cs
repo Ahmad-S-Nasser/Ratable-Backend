@@ -7,22 +7,26 @@ using Ratable.Modules.Reviews.Models;
 using Ratable.Modules.Reviews.Scoring;
 using Ratable.Modules.Reviews.Services;
 using Ratable.Shared.Auth;
+using Ratable.Shared.Authors;
 using Ratable.Shared.Catalog;
 
 namespace Ratable.Modules.Reviews.Endpoints;
 
 public sealed record ErrorBody(string Error, string? Detail = null);
 
+public sealed record AnonymityBody(bool? IsAnonymous);
+
 public sealed record AnswerDto(string CriterionId, int Score, string? OptionValue);
 
 /// <summary>
-/// A review as everyone sees it. There is deliberately NO author field: who wrote a review is added by the anonymity work (P6),
-/// together with the leak test, so nothing about the author can slip into a public response before then.
+/// A review as everyone sees it. <see cref="Author"/> is null when the review is anonymous (or the author has no public name); it is built
+/// only by <see cref="IAuthorPresenter"/>, never from the stored review, so there is no author id here to leak (rule 1).
 /// </summary>
 public sealed record PublicReview(
-    string Id, List<AnswerDto> Answers, double? Overall, string? Text, string Language, bool Verified,
+    string Id, bool Anonymous, PublicAuthor? Author, List<AnswerDto> Answers, double? Overall, string? Text, string Language, bool Verified,
     DateTime CreatedAt, DateTime? EditedOn, int RevisionNumber);
 
+/// <summary>An earlier version. It has no author field: the author is the review's, and is shown (or not) with the current version.</summary>
 public sealed record PublicRevision(int RevisionNumber, List<AnswerDto> Answers, double? Overall, string? Text, string Language, DateTime WrittenAt, DateTime ReplacedAt);
 
 public sealed record ReviewHistory(PublicReview Current, List<PublicRevision> EarlierVersions);
@@ -47,6 +51,7 @@ public static class ReviewEndpoints
         var reviews = app.MapGroup("/api/reviews").WithTags("Reviews");
         reviews.MapGet("/{id}/history", History);
         reviews.MapPut("/{id}", Edit).RequireAuthorization(PolicyNames.SignedIn);
+        reviews.MapPut("/{id}/anonymity", SetAnonymity).RequireAuthorization(PolicyNames.SignedIn);
         reviews.MapDelete("/{id}", Delete).RequireAuthorization(PolicyNames.SignedIn);
 
         app.MapGet("/api/me/reviews", Mine).WithTags("Reviews").RequireAuthorization(PolicyNames.SignedIn);
@@ -60,6 +65,11 @@ public static class ReviewEndpoints
 
     private static async Task<IResult> Edit(string id, ReviewInput body, ClaimsPrincipal user, ReviewService service, CancellationToken ct) =>
         ToResult(await service.EditAsync(UserId(user), id, body, ct), created: false);
+
+    private static async Task<IResult> SetAnonymity(string id, AnonymityBody body, ClaimsPrincipal user, ReviewService service, CancellationToken ct) =>
+        body.IsAnonymous is null
+            ? Results.BadRequest(new ErrorBody("is_anonymous_required"))
+            : ToResult(await service.SetAnonymityAsync(UserId(user), id, body.IsAnonymous.Value, ct), created: false);
 
     private static async Task<IResult> Delete(string id, ClaimsPrincipal user, ReviewService service, CancellationToken ct)
     {
@@ -82,11 +92,12 @@ public static class ReviewEndpoints
         _ => Results.Conflict(new ErrorBody("edit_conflict")),
     };
 
-    private static async Task<IResult> List(string entityId, int? limit, int? skip, ReviewRepository repository, IEntityCatalog catalog, CancellationToken ct)
+    private static async Task<IResult> List(
+        string entityId, int? limit, int? skip, ReviewRepository repository, IEntityCatalog catalog, IAuthorPresenter authors, CancellationToken ct)
     {
         if (await catalog.GetActiveEntityAsync(entityId, ct) is null) return Results.NotFound();
         var found = await repository.ListPublishedAsync(entityId, Math.Clamp(limit ?? 20, 1, 50), Math.Max(0, skip ?? 0), ct);
-        return Results.Ok(found.Select(ToPublic));
+        return Results.Ok(await ToPublic(found, authors, ct));
     }
 
     private static async Task<IResult> Score(string entityId, ReviewRepository repository, IEntityCatalog catalog, CancellationToken ct)
@@ -99,12 +110,14 @@ public static class ReviewEndpoints
     }
 
     /// <summary>The public history: the current version and the earlier versions that were public when they were replaced.</summary>
-    private static async Task<IResult> History(string id, ReviewRepository repository, ReviewRevisionRepository revisions, CancellationToken ct)
+    private static async Task<IResult> History(
+        string id, ReviewRepository repository, ReviewRevisionRepository revisions, IAuthorPresenter authors, CancellationToken ct)
     {
         var review = await repository.GetAsync(id, ct);
         if (review is not { Status: ReviewStatus.Published }) return Results.NotFound();
         var earlier = (await revisions.ListAsync(review.Id, ct)).Where(r => r.StatusWhenSuperseded == ReviewStatus.Published);
-        return Results.Ok(new ReviewHistory(ToPublic(review),
+        var current = (await ToPublic([review], authors, ct)).Single();
+        return Results.Ok(new ReviewHistory(current,
             [.. earlier.Select(r => new PublicRevision(r.RevisionNumber, ToAnswers(r.Answers), ScoreCalculator.ReviewOverall(r.Answers), r.Text, r.Language, r.ChangedAt, r.SupersededAt))]));
     }
 
@@ -113,9 +126,14 @@ public static class ReviewEndpoints
 
     private static List<AnswerDto> ToAnswers(IEnumerable<ReviewAnswer> answers) => [.. answers.Select(a => new AnswerDto(a.CriterionId, a.Score, a.OptionValue))];
 
-    private static PublicReview ToPublic(Review r) => new(
-        r.Id, ToAnswers(r.Answers), ScoreCalculator.ReviewOverall(r.Answers), r.Text, r.Language,
-        r.Verification.Level == VerificationLevel.Verified, r.CreatedAt, r.RevisionNumber > 1 ? r.UpdatedAt : null, r.RevisionNumber);
+    /// <summary>The one place a review becomes a public response. The author comes from the presenter and nowhere else.</summary>
+    private static async Task<List<PublicReview>> ToPublic(IReadOnlyCollection<Review> reviews, IAuthorPresenter authors, CancellationToken ct)
+    {
+        var presented = await authors.PresentAsync([.. reviews.Select(r => new AuthorSlot(r.Id, r.UserId, r.IsAnonymous))], ct);
+        return [.. reviews.Select(r => new PublicReview(
+            r.Id, presented[r.Id] is null, presented[r.Id], ToAnswers(r.Answers), ScoreCalculator.ReviewOverall(r.Answers), r.Text, r.Language,
+            r.Verification.Level == VerificationLevel.Verified, r.CreatedAt, r.RevisionNumber > 1 ? r.UpdatedAt : null, r.RevisionNumber))];
+    }
 
     private static OwnReview ToOwn(Review r) => new(
         r.Id, r.EntityId, r.Status.ToString(), r.IsAnonymous, r.Verification.Level == VerificationLevel.Verified, ToAnswers(r.Answers),

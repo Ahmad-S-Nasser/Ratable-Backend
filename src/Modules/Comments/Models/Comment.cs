@@ -19,4 +19,6 @@ public sealed class Comment
     public CommentStatus Status { get; set; } = CommentStatus.PendingModeration;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    /// <summary>Set when the text was changed after posting. Readers see an "edited" label.</summary>
+    public DateTime? EditedAt { get; set; }
 }

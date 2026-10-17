@@ -3,6 +3,7 @@ using Ratable.Modules.Ai;
 using Ratable.Modules.Ai.Endpoints;
 using Ratable.Modules.Businesses;
 using Ratable.Modules.Comments;
+using Ratable.Modules.Comments.Endpoints;
 using Ratable.Modules.Contributions;
 using Ratable.Modules.Entities;
 using Ratable.Modules.Entities.Endpoints;
@@ -10,6 +11,7 @@ using Ratable.Modules.Identity;
 using Ratable.Modules.Identity.Endpoints;
 using Ratable.Modules.Insights;
 using Ratable.Modules.Moderation;
+using Ratable.Modules.Moderation.Endpoints;
 using Ratable.Modules.Reviews;
 using Ratable.Modules.Reviews.Endpoints;
 using Ratable.Modules.Verification;
@@ -51,6 +53,8 @@ app.MapAiEndpoints();
 app.MapEntityEndpoints();
 app.MapCategoryEndpoints();
 app.MapReviewEndpoints();
+app.MapCommentEndpoints();
+app.MapModerationEndpoints();
 
 app.MapOpenApi("/openapi/{documentName}.json");
 

@@ -11,6 +11,9 @@ public sealed class ReportRepository(IMongoDatabase database) : MongoRepository<
     public Task ReplaceAsync(Report report, CancellationToken ct = default) =>
         Collection.ReplaceOneAsync(r => r.Id == report.Id, report, cancellationToken: ct);
 
+    public Task<long> CountByReporterSinceAsync(string reporterId, DateTime since, CancellationToken ct = default) =>
+        Collection.CountDocumentsAsync(r => r.ReporterId == reporterId && r.CreatedAt >= since, cancellationToken: ct);
+
     public async Task<List<Report>> ListOpenAsync(int limit = 100, CancellationToken ct = default) =>
         await Collection.Find(r => r.Status == ReportStatus.Open).SortBy(r => r.CreatedAt).Limit(limit).ToListAsync(ct);
 }
