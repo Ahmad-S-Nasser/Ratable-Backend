@@ -89,5 +89,7 @@
   ],
   "verdictEnabled": true,
   "collectionsEnabled": true,
-  "active": true
+  "active": true,
+  "contactGated": false,
+  "ratesIndividuals": false
 }

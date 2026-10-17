@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging.Abstractions;
+using MongoDB.Driver;
 using Ratable.Modules.Entities.Data;
 using Ratable.Modules.Entities.Models;
 
@@ -51,6 +52,27 @@ public sealed class CategorySeedFileTests
         }
     }
 
+    [Fact]
+    public void Every_seed_file_sets_contact_gated_and_rates_individuals_to_false()
+    {
+        var categories = CategorySeeder.LoadEmbedded().ToList();
+        Assert.All(categories, c =>
+        {
+            Assert.False(c.ContactGated, c.Id);
+            Assert.False(c.RatesIndividuals, c.Id);
+        });
+
+        // The flags must be written in the files themselves, not only be the C# defaults.
+        var assembly = typeof(CategorySeeder).Assembly;
+        foreach (var name in assembly.GetManifestResourceNames().Where(n => n.Contains(".Categories.") && n.EndsWith(".json")))
+        {
+            using var reader = new StreamReader(assembly.GetManifestResourceStream(name)!);
+            var json = reader.ReadToEnd();
+            Assert.Contains("\"contactGated\": false", json);
+            Assert.Contains("\"ratesIndividuals\": false", json);
+        }
+    }
+
     private static void AssertBoth(string ar, string en, string where)
     {
         Assert.False(string.IsNullOrWhiteSpace(ar), $"{where}: Arabic label is missing");
@@ -88,6 +110,32 @@ public sealed class CategorySeederTests(MongoFixture fixture)
         var after = (await repo.GetAsync("cars"))!;
         Assert.Equal(edited.Criteria.Count, after.Criteria.Count);
         Assert.True(after.AnonymousByDefault);
+    }
+
+    [MongoFact]
+    public async Task The_seeded_flags_are_stored_and_a_changed_value_round_trips()
+    {
+        var repo = new CategoryRepository(fixture.Database);
+        await Seeder(repo).SeedAsync(dryRun: false);
+        var seeded = (await repo.GetAsync("compounds"))!;
+        Assert.False(seeded.ContactGated);
+        Assert.False(seeded.RatesIndividuals);
+
+        seeded.ContactGated = true;
+        seeded.RatesIndividuals = true;
+        await repo.ReplaceAsync(seeded);
+        var raw = await fixture.Database.GetCollection<MongoDB.Bson.BsonDocument>("categories")
+            .Find(MongoDB.Driver.Builders<MongoDB.Bson.BsonDocument>.Filter.Eq("_id", "compounds")).FirstAsync();
+        Assert.True(raw["contactGated"].AsBoolean);
+        Assert.True(raw["ratesIndividuals"].AsBoolean);
+
+        var after = (await repo.GetAsync("compounds"))!;
+        Assert.True(after.ContactGated);
+        Assert.True(after.RatesIndividuals);
+
+        // Re-seeding keeps the edited values.
+        await Seeder(repo).SeedAsync(dryRun: false);
+        Assert.True((await repo.GetAsync("compounds"))!.ContactGated);
     }
 
     [MongoFact]

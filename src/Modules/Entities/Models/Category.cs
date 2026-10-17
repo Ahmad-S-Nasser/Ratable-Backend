@@ -20,6 +20,10 @@ public sealed class Category
     public List<EntityFieldDefinition> EntityFields { get; set; } = [];
     public bool VerdictEnabled { get; set; } = true;
     public bool CollectionsEnabled { get; set; } = true;
+    /// <summary>Rule 19: when true, profiles in this category hide contact details until the owner's plan includes contact. Off by default.</summary>
+    public bool ContactGated { get; set; }
+    /// <summary>Rule 18: true when the category rates individuals (service providers), so their reviews always go to a moderator first. Off by default.</summary>
+    public bool RatesIndividuals { get; set; }
     public bool Active { get; set; } = true;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }
