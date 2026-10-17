@@ -1,8 +1,10 @@
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Ratable.Modules.Comments.Data;
 using Ratable.Modules.Comments.Models;
 using Ratable.Shared.Catalog;
 using Ratable.Shared.Content;
+using Ratable.Shared.Moderation;
 
 namespace Ratable.Modules.Comments.Services;
 
@@ -33,7 +35,9 @@ public sealed class CommentService(
     IEnumerable<IContentDirectory> directories,
     IEntityCatalog catalog,
     IOptions<CommentsOptions> options,
-    TimeProvider time)
+    TimeProvider time,
+    IModerationIntake moderation,
+    ILogger<CommentService> logger)
 {
     private CommentsOptions Opt => options.Value;
 
@@ -68,8 +72,26 @@ public sealed class CommentService(
             UpdatedAt = now,
         };
         await comments.InsertAsync(comment, ct);
-        return new(CommentFailure.None, comment);
+        return new(CommentFailure.None, await ScreenAsync(comment, ct));
     }
+
+    /// <summary>Hands the comment to moderation (same pre-screen and routing as reviews) and reads it back, since it may have been published at once.</summary>
+    private async Task<Comment> ScreenAsync(Comment comment, CancellationToken ct)
+    {
+        try
+        {
+            await moderation.SubmitAsync(new ModerationSubmission(
+                ContentKind.Comment, comment.Id, comment.UserId, null, null, comment.Text, GuessLanguage(comment.Text),
+                comment.Revision, comment.IsAnonymous, false), ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogError(ex, "Moderation intake failed for comment {CommentId}; it stays pending and will be queued by the backfill.", comment.Id);
+        }
+        return await comments.GetAsync(comment.Id, ct) ?? comment;
+    }
+
+    private static string GuessLanguage(string text) => text.Count(c => c is >= '\u0600' and <= '\u06FF') * 3 > text.Count(char.IsLetter) ? "ar" : "en";
 
     /// <summary>Changes the text. The comment is labelled edited and goes back to moderation. An unchanged text changes nothing.</summary>
     public async Task<CommentResult> EditAsync(string userId, string commentId, string? newText, CancellationToken ct = default)
@@ -82,12 +104,14 @@ public sealed class CommentService(
         if (text == comment.Text) return new(CommentFailure.None, comment);
 
         var now = time.GetUtcNow().UtcDateTime;
+        comment.PreviousText = comment.Text;
+        comment.Revision++;
         comment.Text = text;
         comment.EditedAt = now;
         comment.UpdatedAt = now;
         comment.Status = CommentStatus.PendingModeration;
         await comments.ReplaceAsync(comment, ct);
-        return new(CommentFailure.None, comment);
+        return new(CommentFailure.None, await ScreenAsync(comment, ct));
     }
 
     public async Task<CommentResult> SetAnonymityAsync(string userId, string commentId, bool isAnonymous, CancellationToken ct = default)

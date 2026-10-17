@@ -24,7 +24,7 @@ public sealed record AnswerDto(string CriterionId, int Score, string? OptionValu
 /// </summary>
 public sealed record PublicReview(
     string Id, bool Anonymous, PublicAuthor? Author, List<AnswerDto> Answers, double? Overall, string? Text, string Language, bool Verified,
-    DateTime CreatedAt, DateTime? EditedOn, int RevisionNumber);
+    DateTime CreatedAt, DateTime? EditedOn, int RevisionNumber, bool UnderReview);
 
 /// <summary>An earlier version. It has no author field: the author is the review's, and is shown (or not) with the current version.</summary>
 public sealed record PublicRevision(int RevisionNumber, List<AnswerDto> Answers, double? Overall, string? Text, string Language, DateTime WrittenAt, DateTime ReplacedAt);
@@ -34,7 +34,7 @@ public sealed record ReviewHistory(PublicReview Current, List<PublicRevision> Ea
 /// <summary>The author's own view of their review, including what state it is in.</summary>
 public sealed record OwnReview(
     string Id, string EntityId, string Status, bool IsAnonymous, bool Verified, List<AnswerDto> Answers, double? Overall, string? Text,
-    string Language, int RevisionNumber, DateTime CreatedAt, DateTime UpdatedAt);
+    string Language, int RevisionNumber, DateTime CreatedAt, DateTime UpdatedAt, bool UnderReview, string? ModerationReason);
 
 public sealed record CriterionScoreDto(string CriterionId, int Answers, double? Score);
 public sealed record ScoreResponse(double? Overall, int VerifiedReviews, int PublishedReviews, int MinAnswersForCriterion, List<CriterionScoreDto> Criteria);
@@ -132,10 +132,11 @@ public static class ReviewEndpoints
         var presented = await authors.PresentAsync([.. reviews.Select(r => new AuthorSlot(r.Id, r.UserId, r.IsAnonymous))], ct);
         return [.. reviews.Select(r => new PublicReview(
             r.Id, presented[r.Id] is null, presented[r.Id], ToAnswers(r.Answers), ScoreCalculator.ReviewOverall(r.Answers), r.Text, r.Language,
-            r.Verification.Level == VerificationLevel.Verified, r.CreatedAt, r.RevisionNumber > 1 ? r.UpdatedAt : null, r.RevisionNumber))];
+            r.Verification.Level == VerificationLevel.Verified, r.CreatedAt, r.RevisionNumber > 1 ? r.UpdatedAt : null, r.RevisionNumber, r.UnderReview))];
     }
 
     private static OwnReview ToOwn(Review r) => new(
         r.Id, r.EntityId, r.Status.ToString(), r.IsAnonymous, r.Verification.Level == VerificationLevel.Verified, ToAnswers(r.Answers),
-        ScoreCalculator.ReviewOverall(r.Answers), r.Text, r.Language, r.RevisionNumber, r.CreatedAt, r.UpdatedAt);
+        ScoreCalculator.ReviewOverall(r.Answers), r.Text, r.Language, r.RevisionNumber, r.CreatedAt, r.UpdatedAt, r.UnderReview,
+        r.Status == ReviewStatus.Hidden ? r.ModerationReason : null);
 }

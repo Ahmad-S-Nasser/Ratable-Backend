@@ -5,6 +5,7 @@ using Ratable.Modules.Entities.Data;
 using Ratable.Modules.Entities.Services;
 using Ratable.Shared.Catalog;
 using Ratable.Shared.Data;
+using Ratable.Shared.Moderation;
 
 namespace Ratable.Modules.Entities;
 
@@ -23,6 +24,7 @@ public static class EntitiesModule
         services.AddSingleton<DuplicateJudge>();
         services.AddSingleton<EntityService>();
         services.AddSingleton<IEntityCatalog, EntityCatalog>();
+        services.AddSingleton<IQueueCounter, EntityQueueCounter>();
         return services;
     }
 }

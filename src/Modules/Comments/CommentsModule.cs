@@ -6,6 +6,7 @@ using Ratable.Modules.Comments.Services;
 using Ratable.Shared.Authors;
 using Ratable.Shared.Content;
 using Ratable.Shared.Data;
+using Ratable.Shared.Moderation;
 
 namespace Ratable.Modules.Comments;
 
@@ -18,6 +19,7 @@ public static class CommentsModule
         services.AddSingleton<CommentRepository>();
         services.AddIndexInitializer<CommentsIndexInitializer>();
         services.AddSingleton<IContentDirectory, CommentContentDirectory>();
+        services.AddSingleton<IContentModerator, CommentContentModerator>();
         services.TryAddSingleton<IAuthorPresenter, AuthorPresenter>();
         services.AddSingleton<CommentService>();
         return services;

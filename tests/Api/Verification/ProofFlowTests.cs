@@ -136,7 +136,7 @@ public sealed class ProofFlowTests
 
         await Upload(w, file, reading: Good(w));
 
-        var asked = Assert.Single(w.Api.Ai.Requests);
+        var asked = Assert.Single(w.Api.Ai.Requests, r => r.Feature == "proof_check");
         Assert.Equal("proof_check", asked.Feature);
         Assert.Equal((await Only(w)).Id, asked.ItemReference);
         var attachment = Assert.Single(asked.Attachments!);
@@ -656,7 +656,7 @@ public sealed class ProofFlowTests
             Assert.Equal(c.Error, json.GetProperty("error").GetString());
         }
         Assert.Empty(await w.Records.ListForReviewAsync(w.ReviewId));
-        Assert.Empty(w.Api.Ai.Requests);
+        Assert.DoesNotContain(w.Api.Ai.Requests, r => r.Feature == "proof_check"); // the review itself was pre-screened, the refused proof never reached the AI
         Assert.False(Directory.Exists(w.Api.ProofDirectory) && Directory.GetFiles(w.Api.ProofDirectory, "*", SearchOption.AllDirectories).Length > 0);
     }
 

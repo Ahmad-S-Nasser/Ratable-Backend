@@ -24,6 +24,16 @@ public sealed class UserRepository(IMongoDatabase database) : MongoRepository<Us
         return valid.Count == 0 ? [] : await Collection.Find(u => valid.Contains(u.Id)).ToListAsync(ct);
     }
 
+    /// <summary>For the admin user list: newest first, optionally one role and/or status.</summary>
+    public async Task<(List<User> Items, long Total)> SearchAsync(UserRole? role, UserStatus? status, int skip, int limit, CancellationToken ct = default)
+    {
+        var f = Builders<User>.Filter;
+        var filter = f.Empty;
+        if (role is not null) filter &= f.AnyEq(u => u.Roles, role.Value);
+        if (status is not null) filter &= f.Eq(u => u.Status, status.Value);
+        return (await Collection.Find(filter).SortByDescending(u => u.CreatedAt).ThenByDescending(u => u.Id).Skip(skip).Limit(limit).ToListAsync(ct), await Collection.CountDocumentsAsync(filter, cancellationToken: ct));
+    }
+
     public Task ReplaceAsync(User user, CancellationToken ct = default) =>
         Collection.ReplaceOneAsync(u => u.Id == user.Id, user, cancellationToken: ct);
 }

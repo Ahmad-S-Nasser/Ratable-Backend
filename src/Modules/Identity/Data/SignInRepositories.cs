@@ -46,6 +46,9 @@ public sealed class SessionRepository(IMongoDatabase database) : MongoRepository
     public async Task<Session?> GetByTokenHashAsync(string tokenHash, CancellationToken ct = default) =>
         await Collection.Find(s => s.TokenHash == tokenHash).FirstOrDefaultAsync(ct);
 
+    public async Task<Session?> GetLatestForUserAsync(string userId, CancellationToken ct = default) =>
+        await Collection.Find(s => s.UserId == userId).SortByDescending(s => s.CreatedAt).FirstOrDefaultAsync(ct);
+
     public Task RevokeAsync(string tokenHash, DateTime now, CancellationToken ct = default) =>
         Collection.UpdateOneAsync(s => s.TokenHash == tokenHash && s.RevokedAt == null,
             Builders<Session>.Update.Set(s => s.RevokedAt, now), cancellationToken: ct);

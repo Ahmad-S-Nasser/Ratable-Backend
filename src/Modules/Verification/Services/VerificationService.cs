@@ -6,6 +6,7 @@ using Ratable.Modules.Verification.Storage;
 using Ratable.Shared.Audit;
 using Ratable.Shared.Catalog;
 using Ratable.Shared.Content;
+using Ratable.Shared.Moderation;
 using Ratable.Shared.Verification;
 
 namespace Ratable.Modules.Verification.Services;
@@ -49,6 +50,7 @@ public sealed class VerificationService(
     IEntityCatalog catalog,
     IReviewVerifier reviewVerifier,
     IAuditLog audit,
+    IModerationIntake moderation,
     IOptions<VerificationOptions> options,
     TimeProvider time)
 {
@@ -118,6 +120,7 @@ public sealed class VerificationService(
             record.AuditSampled = sampler.ShouldAudit(Opt.AuditSampleRate);
             record.AuditPending = record.AuditSampled;
             await reviewVerifier.SetVerifiedAsync(reviewId, proofType, now, ct);
+            await moderation.OnReviewVerifiedAsync(reviewId, ct); // a review held only for lack of proof can now be published
         }
         else
         {
@@ -154,6 +157,7 @@ public sealed class VerificationService(
                 record.DecidedAt = now;
                 record.DecidedBy = moderatorId;
                 await reviewVerifier.SetVerifiedAsync(record.ReviewId!, record.ProofType!, now, ct);
+                await moderation.OnReviewVerifiedAsync(record.ReviewId!, ct);
                 action = "proof.approved";
             }
             else

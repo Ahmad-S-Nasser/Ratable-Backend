@@ -67,5 +67,12 @@ All AI goes through `IAiClient` (rule 2). It logs every call (model, tokens, cos
 - Files are encrypted at rest in private storage (`Verification__StoragePath`, `Verification__StorageKey`), deleted right after the decision unless the author chose to keep them (separate consent, 12 months), deleted with the review, and removed hourly when due. Only the proof type, date, result and a one-way hash are kept for good.
 - Presence proof (live photo and location at the place) is an interface only (`IPresenceProofService`); the mobile app fills it in.
 
+## Moderation and admin (P8)
+- Every new or edited review and comment is handed to Moderation (`IModerationIntake`). It runs the behaviour signals (same text again, a burst of reviews for one place, several accounts on one device or network) and the AI pre-screen (abuse, personal data, spam, suspected fake, identifying details for an anonymous author), then `RoutingPolicy` decides who reads it first: anything flagged, an AI that is capped or down, and every review of an individual (`Category.RatesIndividuals`) go to a moderator; otherwise a review with an accepted proof is published, and one without proof is published only for an account with a verified phone. Verification never changes a score. A held review whose only reason was "no proof" is published when a proof is accepted.
+- Moderator API (Moderator or Admin): `GET /api/moderation/overview`, `/cases` (+ `POST /cases/{id}/publish|hide`; hiding needs a reason the author sees), `/reports` (+ resolve), `/disputes` (+ uphold or dismiss); entities and proofs have their own queues (`/api/moderation/entities`, `/api/moderation/proofs`). Moderators see content and reasons, never who wrote it.
+- Disputes: a business owner disputes a public review; it stays visible with an "under review" label unless a moderator upholds the dispute (hidden, with a reason).
+- Admin API: `GET /api/admin/audit` (filter, page), `GET /api/admin/users`, `POST /api/admin/users/{id}/suspend|unsuspend` (a reason is needed, sessions end at once, logged), the audited anonymous-author look-up.
+- Sign-in records hashes of the network and the `X-Device-Id` header (apps send it) for the shared-device signal. A background worker queues any pending item that has no case.
+
 ## Hosting on IIS
 See `docs/iis.md`.

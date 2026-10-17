@@ -21,4 +21,10 @@ public sealed class Comment
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     /// <summary>Set when the text was changed after posting. Readers see an "edited" label.</summary>
     public DateTime? EditedAt { get; set; }
+    /// <summary>1 for the first text; goes up by one on every edit. Each version is screened once.</summary>
+    public int Revision { get; set; } = 1;
+    /// <summary>The text before the last edit, so a moderator can see what changed. Never public.</summary>
+    public string? PreviousText { get; set; }
+    /// <summary>Why a moderator hid it. Shown to the author only.</summary>
+    public string? ModerationReason { get; set; }
 }

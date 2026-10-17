@@ -10,7 +10,9 @@ public sealed record OptionInfo(string Value, int Score);
 
 public sealed record CriterionInfo(string Id, CriterionKind Kind, IReadOnlyList<OptionInfo> Options);
 
-public sealed record CategoryInfo(string Id, bool AnonymousByDefault, IReadOnlyList<CriterionInfo> Criteria, IReadOnlyList<string> AcceptedProofTypes);
+public sealed record CategoryInfo(
+    string Id, bool AnonymousByDefault, IReadOnlyList<CriterionInfo> Criteria, IReadOnlyList<string> AcceptedProofTypes,
+    bool RatesIndividuals = false, bool ContactGated = false);
 
 /// <summary>
 /// What other modules (Reviews first) may know about entities and categories, without touching the Entities module's collections.

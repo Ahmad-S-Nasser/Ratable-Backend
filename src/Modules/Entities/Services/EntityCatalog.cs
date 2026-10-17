@@ -20,6 +20,6 @@ public sealed class EntityCatalog(EntityRepository entities, CategoryRepository 
         return new CategoryInfo(category.Id, category.AnonymousByDefault, [.. category.Criteria.Select(c => new CriterionInfo(
             c.Id,
             c.AnswerType switch { AnswerType.Choice => CriterionKind.Choice, AnswerType.YesNo => CriterionKind.YesNo, _ => CriterionKind.Rating5 },
-            [.. c.Options.Select(o => new OptionInfo(o.Value, o.Score))]))], [.. category.AcceptedProofTypes]);
+            [.. c.Options.Select(o => new OptionInfo(o.Value, o.Score))]))], [.. category.AcceptedProofTypes], category.RatesIndividuals, category.ContactGated);
     }
 }

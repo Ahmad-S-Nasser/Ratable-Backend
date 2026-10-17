@@ -102,9 +102,10 @@ public sealed class IdentityApiFactory : WebApplicationFactory<Program>
     public sealed record SignedIn(HttpResponseMessage Response, JsonElement Body, string? Cookie, string? Token, string Phone);
 
     /// <summary>Requests a code and verifies it. client is "web" (cookie) or "app" (bearer token).</summary>
-    public async Task<SignedIn> SignInAsync(string phoneInput, string client = "web")
+    public async Task<SignedIn> SignInAsync(string phoneInput, string client = "web", string? device = null)
     {
         using var http = CreateClient();
+        if (device is not null) http.DefaultRequestHeaders.Add("X-Device-Id", device);
         var request = await http.PostAsJsonAsync("/api/auth/otp/request", new { phone = phoneInput });
         request.EnsureSuccessStatusCode();
         var phone = PhoneNumber.Normalize(phoneInput)!;

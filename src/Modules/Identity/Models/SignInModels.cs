@@ -27,6 +27,9 @@ public sealed class Session
     public string TokenHash { get; set; } = "";
     [BsonRepresentation(BsonType.ObjectId)] public string UserId { get; set; } = "";
     public SessionKind Kind { get; set; }
+    /// <summary>Keyed hashes of the network and device the session was started from, for moderation signals only. Not reversible.</summary>
+    public string? IpHash { get; set; }
+    public string? DeviceHash { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime ExpiresAt { get; set; }
     public DateTime? RevokedAt { get; set; }

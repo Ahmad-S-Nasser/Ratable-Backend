@@ -42,6 +42,13 @@ public sealed class Review
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? DeletedAt { get; set; }
+
+    /// <summary>A business disputed this review. It stays visible with an "under review" label unless a moderator finds it breaks a rule.</summary>
+    public bool UnderReview { get; set; }
+
+    /// <summary>Why a moderator hid it. Shown to the author, never to the public.</summary>
+    public string? ModerationReason { get; set; }
+    public DateTime? ModeratedAt { get; set; }
 }
 
 /// <summary>An earlier version of a review. Written once, never changed, kept even when the review is deleted.</summary>

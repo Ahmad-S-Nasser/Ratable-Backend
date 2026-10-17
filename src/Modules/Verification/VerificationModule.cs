@@ -7,6 +7,7 @@ using Ratable.Modules.Verification.Services;
 using Ratable.Modules.Verification.Storage;
 using Ratable.Shared.Data;
 using Ratable.Shared.Merge;
+using Ratable.Shared.Moderation;
 using Ratable.Shared.Verification;
 
 namespace Ratable.Modules.Verification;
@@ -28,6 +29,7 @@ public static class VerificationModule
         services.TryAddSingleton<IPresenceProofService, UnavailablePresenceProofService>();
         services.AddSingleton<ProofChecker>();
         services.AddSingleton<VerificationService>();
+        services.AddSingleton<IQueueCounter, ProofQueueCounter>();
         services.AddSingleton<IReviewDeletedHandler, ProofCleanupOnReviewDeleted>();
         services.AddHostedService<ProofRetentionWorker>();
         return services;

@@ -7,6 +7,7 @@ using Ratable.Modules.Identity.Data;
 using Ratable.Modules.Identity.Services;
 using Ratable.Shared.Authors;
 using Ratable.Shared.Data;
+using Ratable.Shared.Moderation;
 
 namespace Ratable.Modules.Identity;
 
@@ -26,6 +27,7 @@ public static class IdentityModule
         services.AddSingleton<IdentityDirectory>();
         services.AddSingleton<IPublicProfiles>(sp => sp.GetRequiredService<IdentityDirectory>());
         services.AddSingleton<IAccountDirectory>(sp => sp.GetRequiredService<IdentityDirectory>());
+        services.AddSingleton<IAccountSignals, AccountSignalsService>();
         services.AddSingleton<OtpService>();
         services.AddSingleton<SessionService>();
         if (string.Equals(configuration[$"{IdentityOptions.Section}:{nameof(IdentityOptions.OtpSender)}"], "console", StringComparison.OrdinalIgnoreCase))

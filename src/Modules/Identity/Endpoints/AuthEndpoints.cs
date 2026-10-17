@@ -74,7 +74,7 @@ public static class AuthEndpoints
         }
 
         var user = result.User!;
-        var issued = await sessions.CreateAsync(user.Id, client == "web" ? SessionKind.Web : SessionKind.App, http.RequestAborted);
+        var issued = await sessions.CreateAsync(user.Id, client == "web" ? SessionKind.Web : SessionKind.App, http.Connection.RemoteIpAddress?.ToString(), http.Request.Headers["X-Device-Id"].ToString(), http.RequestAborted);
         var me = ToMe(user);
         if (client == "app") return Results.Ok(new SignedInAppResponse(issued.Token, issued.ExpiresAt, me));
 

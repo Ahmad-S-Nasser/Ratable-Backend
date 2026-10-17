@@ -12,15 +12,25 @@ public sealed record IssuedSession(string Token, DateTime ExpiresAt);
 public sealed class SessionService(
     SessionRepository sessions,
     UserRepository users,
+    PhoneProtector protector,
     IOptions<IdentityOptions> options,
     TimeProvider time)
 {
-    public async Task<IssuedSession> CreateAsync(string userId, SessionKind kind, CancellationToken ct = default)
+    public async Task<IssuedSession> CreateAsync(string userId, SessionKind kind, string? ip = null, string? device = null, CancellationToken ct = default)
     {
         var token = Base64Url(RandomNumberGenerator.GetBytes(32));
         var now = time.GetUtcNow().UtcDateTime;
         var days = kind == SessionKind.Web ? options.Value.WebSessionDays : options.Value.AppSessionDays;
-        var session = new Session { TokenHash = HashToken(token), UserId = userId, Kind = kind, CreatedAt = now, ExpiresAt = now.AddDays(days) };
+        var session = new Session
+        {
+            TokenHash = HashToken(token),
+            UserId = userId,
+            Kind = kind,
+            CreatedAt = now,
+            ExpiresAt = now.AddDays(days),
+            IpHash = string.IsNullOrWhiteSpace(ip) ? null : protector.Hash("ip:" + ip),
+            DeviceHash = string.IsNullOrWhiteSpace(device) ? null : protector.Hash("device:" + device.Trim())
+        };
         await sessions.InsertAsync(session, ct);
         return new IssuedSession(token, session.ExpiresAt);
     }

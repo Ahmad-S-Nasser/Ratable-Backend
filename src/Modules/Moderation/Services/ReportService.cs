@@ -13,6 +13,21 @@ public sealed class ModerationOptions
     public const string Section = "Moderation";
 
     public int MaxReportsPerDay { get; set; } = 30;
+
+    /// <summary>An AI flag counts when its confidence is at least this.</summary>
+    public double FlagThreshold { get; set; } = 0.5;
+
+    /// <summary>Behaviour signals. The same text again within this many days is flagged (texts shorter than MinCopiedTextLength are not compared).</summary>
+    public int CopiedTextWindowDays { get; set; } = 90;
+    public int MinCopiedTextLength { get; set; } = 20;
+
+    /// <summary>This many new reviews of one entity within the window (this one included) is a burst.</summary>
+    public int BurstThreshold { get; set; } = 5;
+    public int BurstWindowMinutes { get; set; } = 60;
+
+    /// <summary>This many OTHER accounts reviewing the same entity from the same network or device is flagged.</summary>
+    public int SharedDeviceMinOtherAccounts { get; set; } = 2;
+    public int SharedDeviceWindowDays { get; set; } = 30;
     public int MinLookupReasonLength { get; set; } = 10;
     public int MaxReasonLength { get; set; } = 500;
 }

@@ -26,6 +26,9 @@ public sealed class EntityRepository(IMongoDatabase database) : MongoRepository<
     public async Task<List<Entity>> ListByStatusAsync(EntityStatus status, int limit = 100, CancellationToken ct = default) =>
         await Collection.Find(e => e.Status == status).SortBy(e => e.CreatedAt).Limit(limit).ToListAsync(ct);
 
+    public Task<long> CountByStatusAsync(EntityStatus status, CancellationToken ct = default) =>
+        Collection.CountDocumentsAsync(e => e.Status == status, cancellationToken: ct);
+
     public Task<long> CountSubmittedSinceAsync(string userId, DateTime since, CancellationToken ct = default) =>
         Collection.CountDocumentsAsync(e => e.SubmittedByUserId == userId && e.CreatedAt >= since, cancellationToken: ct);
 

@@ -42,6 +42,11 @@ public sealed class ReviewRepository(IMongoDatabase database) : MongoRepository<
     public Task<long> CountPublishedAsync(string entityId, CancellationToken ct = default) =>
         Collection.CountDocumentsAsync(r => r.EntityId == entityId && r.Status == ReviewStatus.Published, cancellationToken: ct);
 
+    /// <summary>Reviews waiting for moderation, oldest first. Only what is needed to make sure each has a case in the queue.</summary>
+    public async Task<IReadOnlyList<Ratable.Shared.Moderation.PendingContent>> ListPendingAsync(int limit, CancellationToken ct = default) =>
+        [.. (await Collection.Find(r => r.Status == ReviewStatus.PendingModeration).SortBy(r => r.UpdatedAt).Limit(limit)
+            .Project(r => new { r.Id, r.RevisionNumber }).ToListAsync(ct)).Select(x => new Ratable.Shared.Moderation.PendingContent(x.Id, x.RevisionNumber))];
+
     public async Task<List<Review>> ListByUserAsync(string userId, string? entityId, CancellationToken ct = default) =>
         await Collection.Find(r => r.UserId == userId && (entityId == null || r.EntityId == entityId)).SortByDescending(r => r.CreatedAt).Limit(100).ToListAsync(ct);
 }

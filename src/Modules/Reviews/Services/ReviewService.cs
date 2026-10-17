@@ -1,9 +1,12 @@
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 using Ratable.Modules.Reviews.Data;
 using Ratable.Modules.Reviews.Models;
 using Ratable.Modules.Reviews.Scoring;
 using Ratable.Shared.Catalog;
+using Ratable.Shared.Content;
+using Ratable.Shared.Moderation;
 using Ratable.Shared.Verification;
 
 namespace Ratable.Modules.Reviews.Services;
@@ -41,7 +44,9 @@ public sealed class ReviewService(
     ReviewRevisionRepository revisions,
     IEntityCatalog catalog,
     TimeProvider time,
-    IEnumerable<IReviewDeletedHandler> deletedHandlers)
+    IEnumerable<IReviewDeletedHandler> deletedHandlers,
+    IModerationIntake moderation,
+    ILogger<ReviewService> logger)
 {
     public const int MaxTextLength = 4000;
 
@@ -83,7 +88,26 @@ public sealed class ReviewService(
         {
             return new(ReviewFailure.AlreadyReviewed, await reviews.GetByUserAndEntityAsync(userId, entityId, ct));
         }
-        return new(ReviewFailure.None, review);
+        return new(ReviewFailure.None, await ScreenAsync(review, ct));
+    }
+
+    /// <summary>
+    /// Hands the review to the Moderation module (AI pre-screen and routing). The module may publish it at once; the stored review is read again so the caller
+    /// sees its real state. If moderation cannot be reached the review simply stays PendingModeration and the backfill worker queues it later.
+    /// </summary>
+    private async Task<Review> ScreenAsync(Review review, CancellationToken ct)
+    {
+        try
+        {
+            await moderation.SubmitAsync(new ModerationSubmission(
+                ContentKind.Review, review.Id, review.UserId, review.EntityId, review.CategoryId, review.Text, review.Language, review.RevisionNumber,
+                review.IsAnonymous, review.Verification.Level == VerificationLevel.Verified), ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogError(ex, "Moderation intake failed for review {ReviewId}; it stays pending and will be queued by the backfill.", review.Id);
+        }
+        return await reviews.GetAsync(review.Id, ct) ?? review;
     }
 
     // ---- edit (and restore) ----
@@ -146,7 +170,7 @@ public sealed class ReviewService(
         current.Status = ReviewStatus.PendingModeration;
 
         if (!await reviews.TryReplaceAsync(current, expected, ct)) return new(ReviewFailure.Conflict);
-        return new(ReviewFailure.None, current);
+        return new(ReviewFailure.None, await ScreenAsync(current, ct));
     }
 
     // ---- the anonymity switch ----

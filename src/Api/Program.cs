@@ -50,6 +50,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapIdentityEndpoints();
+app.MapAdminUserEndpoints();
 app.MapAiEndpoints();
 app.MapEntityEndpoints();
 app.MapCategoryEndpoints();

@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Ratable.Modules.Moderation.Data;
 using Ratable.Modules.Moderation.Services;
 using Ratable.Shared.Audit;
+using Ratable.Shared.Moderation;
 using Ratable.Shared.Data;
 
 namespace Ratable.Modules.Moderation;
@@ -25,6 +26,15 @@ public static class ModerationModule
         services.TryAddSingleton(TimeProvider.System);
         services.AddSingleton<IAuditLog, AuditLogService>();
         services.Configure<ModerationOptions>(configuration.GetSection(ModerationOptions.Section));
+        services.AddSingleton<ModerationCaseRepository>();
+        services.AddSingleton<DisputeRepository>();
+        services.AddSingleton<PrescreenService>();
+        services.AddSingleton<ModerationService>();
+        services.AddSingleton<IModerationIntake>(sp => sp.GetRequiredService<ModerationService>());
+        services.AddSingleton<ReportQueueService>();
+        services.AddSingleton<DisputeService>();
+        services.AddSingleton<OverviewService>();
+        services.AddHostedService<ModerationBackfillWorker>();
         services.AddSingleton<ReportService>();
         services.AddSingleton<AnonymousAuthorLookupService>();
         return services;

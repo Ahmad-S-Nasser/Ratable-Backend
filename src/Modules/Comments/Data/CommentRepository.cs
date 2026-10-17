@@ -1,6 +1,7 @@
 using MongoDB.Driver;
 using Ratable.Modules.Comments.Models;
 using Ratable.Shared.Content;
+using Ratable.Shared.Moderation;
 using Ratable.Shared.Data;
 
 namespace Ratable.Modules.Comments.Data;
@@ -21,6 +22,10 @@ public sealed class CommentRepository(IMongoDatabase database) : MongoRepository
 
     public async Task<List<Comment>> ListByUserAsync(string userId, string? reviewId, CancellationToken ct = default) =>
         await Collection.Find(c => c.UserId == userId && (reviewId == null || c.ReviewId == reviewId)).SortByDescending(c => c.CreatedAt).Limit(100).ToListAsync(ct);
+
+    public async Task<IReadOnlyList<PendingContent>> ListPendingAsync(int limit, CancellationToken ct = default) =>
+        [.. (await Collection.Find(c => c.Status == CommentStatus.PendingModeration).SortBy(c => c.UpdatedAt).Limit(limit)
+            .Project(c => new { c.Id, c.Revision }).ToListAsync(ct)).Select(x => new PendingContent(x.Id, x.Revision))];
 
     public Task<long> CountByUserSinceAsync(string userId, DateTime since, CancellationToken ct = default) =>
         Collection.CountDocumentsAsync(c => c.UserId == userId && c.CreatedAt >= since, cancellationToken: ct);
