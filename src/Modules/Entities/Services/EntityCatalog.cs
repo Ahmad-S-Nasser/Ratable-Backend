@@ -17,7 +17,13 @@ public sealed class EntityCatalog(EntityRepository entities, CategoryRepository 
     {
         if (await categories.GetAsync(categoryId, ct) is not { Active: true }) return [];
         var found = await entities.ListByCategoryAsync(categoryId, limit, ct);
-        return [.. found.Select(e => new CatalogEntry(e.Id, e.CategoryId, e.Name, e.Slugs, e.City, e.Address))];
+        return [.. found.Select(e => new CatalogEntry(e.Id, e.CategoryId, e.Name, e.Slugs, e.City, e.Address, e.UpdatedAt))];
+    }
+
+    public async Task<IReadOnlyList<CatalogEntry>> GetActiveEntriesAsync(IReadOnlyCollection<string> entityIds, CancellationToken ct = default)
+    {
+        var found = await entities.ListActiveByIdsAsync(entityIds, ct);
+        return [.. found.Select(e => new CatalogEntry(e.Id, e.CategoryId, e.Name, e.Slugs, e.City, e.Address, e.UpdatedAt))];
     }
 
     public async Task<CategoryInfo?> GetCategoryAsync(string categoryId, CancellationToken ct = default)

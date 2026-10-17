@@ -45,6 +45,8 @@ public sealed record PlaceCard(string Id, LocalizedText Name, Dictionary<string,
 
 public sealed record PlaceList(List<PlaceCard> Places, int Total);
 
+public sealed record SitemapPlace(string Id, string CategoryId, Dictionary<string, string> Slugs, DateTime LastModified);
+
 public static class ReviewEndpoints
 {
     public static IEndpointRouteBuilder MapReviewEndpoints(this IEndpointRouteBuilder app)
@@ -61,6 +63,7 @@ public static class ReviewEndpoints
         reviews.MapDelete("/{id}", Delete).RequireAuthorization(PolicyNames.SignedIn);
 
         app.MapGet("/api/categories/{categoryId}/places", Places).WithTags("Reviews").Produces<PlaceList>().Produces(404);
+        app.MapGet("/api/sitemap/places", SitemapPlaces).WithTags("Reviews").Produces<List<SitemapPlace>>();
         app.MapGet("/api/me/reviews", Mine).WithTags("Reviews").RequireAuthorization(PolicyNames.SignedIn);
         return app;
     }
@@ -86,6 +89,21 @@ public static class ReviewEndpoints
             .ToList();
         var page = ranked.Skip(Math.Max(0, skip ?? 0)).Take(Math.Clamp(limit ?? 20, 1, 50)).ToList();
         return Results.Ok(new PlaceList(page, ranked.Count));
+    }
+
+    /// <summary>
+    /// Places for the sitemap: only those with at least one verified review (the others are not offered to search), with the date of the latest
+    /// change to the place or its reviews as lastmod.
+    /// </summary>
+    private static async Task<IResult> SitemapPlaces(int? skip, int? limit, ReviewRepository repository, IEntityCatalog catalog, CancellationToken ct)
+    {
+        var changed = await repository.ListVerifiedEntitiesAsync(Math.Max(0, skip ?? 0), Math.Clamp(limit ?? 1000, 1, 5000), ct);
+        var entries = (await catalog.GetActiveEntriesAsync([.. changed.Select(c => c.EntityId)], ct)).ToDictionary(e => e.Id);
+        return Results.Ok(changed.Where(c => entries.ContainsKey(c.EntityId)).Select(c =>
+        {
+            var e = entries[c.EntityId];
+            return new SitemapPlace(e.Id, e.CategoryId, new Dictionary<string, string>(e.Slugs), e.UpdatedAt > c.LastChange ? e.UpdatedAt : c.LastChange);
+        }).ToList());
     }
 
     private static string UserId(ClaimsPrincipal p) => p.FindFirstValue(ClaimTypes.NameIdentifier)!;

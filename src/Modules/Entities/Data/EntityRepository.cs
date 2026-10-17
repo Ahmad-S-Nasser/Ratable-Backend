@@ -22,6 +22,9 @@ public sealed class EntityRepository(IMongoDatabase database) : MongoRepository<
     public async Task<List<Entity>> ListByCategoryAsync(string categoryId, int limit = 50, CancellationToken ct = default) =>
         await Collection.Find(e => e.CategoryId == categoryId && e.Status == EntityStatus.Active).Limit(limit).ToListAsync(ct);
 
+    public async Task<List<Entity>> ListActiveByIdsAsync(IReadOnlyCollection<string> ids, CancellationToken ct = default) =>
+        await Collection.Find(e => ids.Contains(e.Id) && e.Status == EntityStatus.Active).ToListAsync(ct);
+
     /// <summary>The moderator queue, oldest first.</summary>
     public async Task<List<Entity>> ListByStatusAsync(EntityStatus status, int limit = 100, CancellationToken ct = default) =>
         await Collection.Find(e => e.Status == status).SortBy(e => e.CreatedAt).Limit(limit).ToListAsync(ct);

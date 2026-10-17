@@ -45,6 +45,17 @@ public sealed class ReviewRepository(IMongoDatabase database) : MongoRepository<
             .Project<Review>(Builders<Review>.Projection.Include(r => r.EntityId).Include(r => r.Answers).Include(r => r.Status).Include(r => r.Verification))
             .ToListAsync(ct);
 
+    /// <summary>The entities that have at least one counting review, in id order, with the time of their latest review change. For the sitemap.</summary>
+    public async Task<List<(string EntityId, DateTime LastChange)>> ListVerifiedEntitiesAsync(int skip, int limit, CancellationToken ct = default)
+    {
+        var groups = await Collection.Aggregate()
+            .Match(r => r.Status == ReviewStatus.Published && r.Verification.Level == VerificationLevel.Verified)
+            .Group(r => r.EntityId, g => new { EntityId = g.Key, LastChange = g.Max(r => r.UpdatedAt) })
+            .SortBy(g => g.EntityId).Skip(skip).Limit(limit)
+            .ToListAsync(ct);
+        return [.. groups.Select(g => (g.EntityId, g.LastChange))];
+    }
+
     public Task<long> CountPublishedAsync(string entityId, CancellationToken ct = default) =>
         Collection.CountDocumentsAsync(r => r.EntityId == entityId && r.Status == ReviewStatus.Published, cancellationToken: ct);
 

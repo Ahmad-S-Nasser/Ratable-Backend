@@ -6,7 +6,7 @@ namespace Ratable.Shared.Catalog;
 public sealed record EntityRef(string Id, string CategoryId, IReadOnlyList<string> Names);
 
 /// <summary>What a listing needs to show about a public entity.</summary>
-public sealed record CatalogEntry(string Id, string CategoryId, LocalizedText Name, IReadOnlyDictionary<string, string> Slugs, string? City, string? Address);
+public sealed record CatalogEntry(string Id, string CategoryId, LocalizedText Name, IReadOnlyDictionary<string, string> Slugs, string? City, string? Address, DateTime UpdatedAt);
 
 public enum CriterionKind { Rating5, Choice, YesNo }
 
@@ -30,6 +30,9 @@ public interface IEntityCatalog
 
     /// <summary>Public entities of an active category, for listings. Empty when the category is unknown or inactive.</summary>
     Task<IReadOnlyList<CatalogEntry>> ListActiveByCategoryAsync(string categoryId, int limit, CancellationToken cancellationToken = default);
+
+    /// <summary>Public entities by id, for listings. Ids that are not public are left out.</summary>
+    Task<IReadOnlyList<CatalogEntry>> GetActiveEntriesAsync(IReadOnlyCollection<string> entityIds, CancellationToken cancellationToken = default);
 
     /// <summary>The category's criteria, only if the category is active.</summary>
     Task<CategoryInfo?> GetCategoryAsync(string categoryId, CancellationToken cancellationToken = default);

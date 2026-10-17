@@ -58,4 +58,21 @@ public sealed class PlaceListTests
         var (_, json) = await Send(api, HttpMethod.Get, "/api/categories/compounds/places");
         Assert.Empty(json.GetProperty("places").EnumerateArray());
     }
+    [MongoFact]
+    public async Task The_sitemap_lists_only_places_with_a_verified_review_and_a_real_last_change_date()
+    {
+        await using var api = new IdentityApiFactory();
+        var verified = await SeedEntity(api);
+        var unverified = await SeedEntity(api);
+        await Seed(api, verified.Id, ReviewStatus.Published, VerificationLevel.Verified, 4);
+        await Seed(api, unverified.Id, ReviewStatus.Published, VerificationLevel.Unverified, 5);
+
+        var (response, json) = await Send(api, HttpMethod.Get, "/api/sitemap/places");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var item = Assert.Single(json.EnumerateArray());
+        Assert.Equal(verified.Id, item.GetProperty("id").GetString());
+        Assert.Equal("compounds", item.GetProperty("categoryId").GetString());
+        Assert.True(item.GetProperty("lastModified").GetDateTime() > DateTime.UtcNow.AddMinutes(-5));
+    }
 }
