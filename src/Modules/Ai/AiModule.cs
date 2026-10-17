@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Ratable.Modules.Ai.Data;
 using Ratable.Modules.Ai.Providers;
+using Ratable.Shared.Ai;
 using Ratable.Shared.Data;
 
 namespace Ratable.Modules.Ai;
@@ -18,9 +19,7 @@ public static class AiModule
         services.AddSingleton<AiCacheRepository>();
         services.AddIndexInitializer<AiIndexInitializer>();
 
-        // One real adapter, chosen by configuration. Without one, every call fails visibly.
-        if (string.Equals(configuration[$"{AiOptions.Section}:{nameof(AiOptions.Provider)}"], "anthropic", StringComparison.OrdinalIgnoreCase))
-            services.TryAddSingleton<IAiProvider, AnthropicProvider>();
+        // The external AI service registers its own IAiProvider before this call. Until then every call fails visibly.
         services.TryAddSingleton<IAiProvider, NoAiProvider>();
 
         // A single instance, because it tracks the cost of calls that are still running.

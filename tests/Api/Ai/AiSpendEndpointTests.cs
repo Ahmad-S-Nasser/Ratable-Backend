@@ -1,3 +1,4 @@
+using Ratable.Shared.Ai;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -32,7 +33,6 @@ public sealed class AiSpendEndpointTests
             Assert.True(ai.Prices.TryGetValue(model, out var price), $"{model} has no price");
             Assert.True(price!.InputPerMillionUsd > 0m && price.OutputPerMillionUsd > 0m);
         }
-        Assert.Equal("", ai.Provider); // no provider unless configured: calls fail visibly
     }
 
     [Fact]

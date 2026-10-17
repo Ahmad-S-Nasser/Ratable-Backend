@@ -1,3 +1,4 @@
+using Ratable.Shared.Ai;
 using System.Collections.Concurrent;
 
 namespace Ratable.Modules.Ai.Providers;

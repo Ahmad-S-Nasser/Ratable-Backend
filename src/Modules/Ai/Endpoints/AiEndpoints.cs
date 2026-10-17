@@ -1,3 +1,4 @@
+using Ratable.Shared.Ai;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
