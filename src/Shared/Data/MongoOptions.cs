@@ -8,4 +8,7 @@ public sealed class MongoOptions
     public string ConnectionString { get; set; } = "";
 
     public string Database { get; set; } = "ratable";
+
+    /// <summary>Create indexes and seed configuration data when the API starts.</summary>
+    public bool BootstrapOnStartup { get; set; } = true;
 }

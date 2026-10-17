@@ -1,0 +1,119 @@
+{
+  "_id": "restaurants-cafes",
+  "name": {
+    "ar": "المطاعم والكافيهات",
+    "en": "Restaurants and cafes"
+  },
+  "icon": "utensils",
+  "schemaOrgType": "Restaurant",
+  "criteria": [
+    {
+      "id": "taste",
+      "label": {
+        "ar": "الطعم",
+        "en": "Taste"
+      },
+      "answerType": "Rating5",
+      "options": []
+    },
+    {
+      "id": "service",
+      "label": {
+        "ar": "الخدمة",
+        "en": "Service"
+      },
+      "answerType": "Rating5",
+      "options": []
+    },
+    {
+      "id": "cleanliness",
+      "label": {
+        "ar": "النظافة",
+        "en": "Cleanliness"
+      },
+      "answerType": "Rating5",
+      "options": []
+    },
+    {
+      "id": "ambiance",
+      "label": {
+        "ar": "الأجواء",
+        "en": "Ambiance"
+      },
+      "answerType": "Rating5",
+      "options": []
+    },
+    {
+      "id": "wait_time",
+      "label": {
+        "ar": "وقت الانتظار",
+        "en": "Wait time"
+      },
+      "answerType": "Choice",
+      "options": [
+        {
+          "value": "under_15",
+          "label": {
+            "ar": "أقل من 15 دقيقة",
+            "en": "Under 15 minutes"
+          },
+          "score": 5
+        },
+        {
+          "value": "15_30",
+          "label": {
+            "ar": "من 15 إلى 30 دقيقة",
+            "en": "15 to 30 minutes"
+          },
+          "score": 3
+        },
+        {
+          "value": "over_30",
+          "label": {
+            "ar": "أكثر من 30 دقيقة",
+            "en": "Over 30 minutes"
+          },
+          "score": 1
+        }
+      ]
+    },
+    {
+      "id": "value",
+      "label": {
+        "ar": "القيمة مقابل السعر",
+        "en": "Value for money"
+      },
+      "answerType": "Rating5",
+      "options": []
+    }
+  ],
+  "acceptedProofTypes": [
+    "receipt",
+    "booking_confirmation",
+    "photo_of_visit"
+  ],
+  "anonymousByDefault": false,
+  "entityFields": [
+    {
+      "key": "cuisine",
+      "label": {
+        "ar": "نوع المطبخ",
+        "en": "Cuisine"
+      },
+      "type": "text",
+      "options": []
+    },
+    {
+      "key": "priceBand",
+      "label": {
+        "ar": "فئة السعر",
+        "en": "Price band"
+      },
+      "type": "text",
+      "options": []
+    }
+  ],
+  "verdictEnabled": true,
+  "collectionsEnabled": true,
+  "active": true
+}

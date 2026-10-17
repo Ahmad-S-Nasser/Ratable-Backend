@@ -1,0 +1,93 @@
+{
+  "_id": "appliances",
+  "name": {
+    "ar": "الأجهزة المنزلية",
+    "en": "Appliances"
+  },
+  "icon": "plug",
+  "schemaOrgType": "Product",
+  "criteria": [
+    {
+      "id": "reliability",
+      "label": {
+        "ar": "الاعتمادية",
+        "en": "Reliability"
+      },
+      "answerType": "Rating5",
+      "options": []
+    },
+    {
+      "id": "performance",
+      "label": {
+        "ar": "الأداء",
+        "en": "Performance"
+      },
+      "answerType": "Rating5",
+      "options": []
+    },
+    {
+      "id": "energy_use",
+      "label": {
+        "ar": "استهلاك الكهرباء",
+        "en": "Energy use"
+      },
+      "answerType": "Rating5",
+      "options": []
+    },
+    {
+      "id": "noise",
+      "label": {
+        "ar": "مستوى الضوضاء",
+        "en": "Noise"
+      },
+      "answerType": "Rating5",
+      "options": []
+    },
+    {
+      "id": "after_sales",
+      "label": {
+        "ar": "خدمة ما بعد البيع",
+        "en": "After-sales service"
+      },
+      "answerType": "Rating5",
+      "options": []
+    },
+    {
+      "id": "value",
+      "label": {
+        "ar": "القيمة مقابل السعر",
+        "en": "Value for money"
+      },
+      "answerType": "Rating5",
+      "options": []
+    }
+  ],
+  "acceptedProofTypes": [
+    "purchase_invoice",
+    "warranty_card"
+  ],
+  "anonymousByDefault": false,
+  "entityFields": [
+    {
+      "key": "brand",
+      "label": {
+        "ar": "الماركة",
+        "en": "Brand"
+      },
+      "type": "text",
+      "options": []
+    },
+    {
+      "key": "model",
+      "label": {
+        "ar": "الموديل",
+        "en": "Model"
+      },
+      "type": "text",
+      "options": []
+    }
+  ],
+  "verdictEnabled": true,
+  "collectionsEnabled": true,
+  "active": true
+}

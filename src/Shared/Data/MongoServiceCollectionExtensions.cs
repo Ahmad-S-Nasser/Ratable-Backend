@@ -9,6 +9,7 @@ public static class MongoServiceCollectionExtensions
 {
     public static IServiceCollection AddRatableMongo(this IServiceCollection services, IConfiguration configuration)
     {
+        MongoConventions.Register();
         services.AddOptions<MongoOptions>()
             .Bind(configuration.GetSection(MongoOptions.Section))
             .Validate(o => !string.IsNullOrWhiteSpace(o.ConnectionString), "Mongo:ConnectionString is not set.")
@@ -20,6 +21,7 @@ public static class MongoServiceCollectionExtensions
         services.AddSingleton(sp =>
             sp.GetRequiredService<IMongoClient>().GetDatabase(sp.GetRequiredService<IOptions<MongoOptions>>().Value.Database));
 
+        services.AddDataBootstrap();
         services.AddHealthChecks().AddCheck<MongoHealthCheck>("mongo", tags: ["ready"]);
         return services;
     }

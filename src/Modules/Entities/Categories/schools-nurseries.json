@@ -1,0 +1,104 @@
+{
+  "_id": "schools-nurseries",
+  "name": {
+    "ar": "المدارس والحضانات",
+    "en": "Schools and nurseries"
+  },
+  "icon": "school",
+  "schemaOrgType": "School",
+  "criteria": [
+    {
+      "id": "teaching",
+      "label": {
+        "ar": "جودة التدريس",
+        "en": "Teaching quality"
+      },
+      "answerType": "Rating5",
+      "options": []
+    },
+    {
+      "id": "safety",
+      "label": {
+        "ar": "الأمان",
+        "en": "Safety"
+      },
+      "answerType": "Rating5",
+      "options": []
+    },
+    {
+      "id": "communication",
+      "label": {
+        "ar": "التواصل مع أولياء الأمور",
+        "en": "Communication with parents"
+      },
+      "answerType": "Rating5",
+      "options": []
+    },
+    {
+      "id": "facilities",
+      "label": {
+        "ar": "المرافق",
+        "en": "Facilities"
+      },
+      "answerType": "Rating5",
+      "options": []
+    },
+    {
+      "id": "fees_value",
+      "label": {
+        "ar": "المصروفات مقابل القيمة",
+        "en": "Fees against value"
+      },
+      "answerType": "Rating5",
+      "options": []
+    },
+    {
+      "id": "activities",
+      "label": {
+        "ar": "الأنشطة",
+        "en": "Activities"
+      },
+      "answerType": "Rating5",
+      "options": []
+    },
+    {
+      "id": "staff",
+      "label": {
+        "ar": "سلوك العاملين",
+        "en": "Staff behaviour"
+      },
+      "answerType": "Rating5",
+      "options": []
+    }
+  ],
+  "acceptedProofTypes": [
+    "fee_receipt",
+    "enrollment_letter",
+    "student_card",
+    "photo_of_visit"
+  ],
+  "anonymousByDefault": true,
+  "entityFields": [
+    {
+      "key": "stage",
+      "label": {
+        "ar": "المرحلة",
+        "en": "Stage"
+      },
+      "type": "text",
+      "options": []
+    },
+    {
+      "key": "curriculum",
+      "label": {
+        "ar": "المنهج",
+        "en": "Curriculum"
+      },
+      "type": "text",
+      "options": []
+    }
+  ],
+  "verdictEnabled": true,
+  "collectionsEnabled": true,
+  "active": true
+}

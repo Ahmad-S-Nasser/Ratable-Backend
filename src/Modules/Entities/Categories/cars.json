@@ -1,0 +1,103 @@
+{
+  "_id": "cars",
+  "name": {
+    "ar": "السيارات",
+    "en": "Cars"
+  },
+  "icon": "car",
+  "schemaOrgType": "Product",
+  "criteria": [
+    {
+      "id": "reliability",
+      "label": {
+        "ar": "الاعتمادية",
+        "en": "Reliability"
+      },
+      "answerType": "Rating5",
+      "options": []
+    },
+    {
+      "id": "comfort",
+      "label": {
+        "ar": "الراحة",
+        "en": "Comfort"
+      },
+      "answerType": "Rating5",
+      "options": []
+    },
+    {
+      "id": "fuel_use",
+      "label": {
+        "ar": "استهلاك الوقود",
+        "en": "Fuel use"
+      },
+      "answerType": "Rating5",
+      "options": []
+    },
+    {
+      "id": "after_sales",
+      "label": {
+        "ar": "خدمة ما بعد البيع",
+        "en": "After-sales service"
+      },
+      "answerType": "Rating5",
+      "options": []
+    },
+    {
+      "id": "spare_parts_cost",
+      "label": {
+        "ar": "تكلفة قطع الغيار",
+        "en": "Spare parts cost"
+      },
+      "answerType": "Rating5",
+      "options": []
+    },
+    {
+      "id": "resale_value",
+      "label": {
+        "ar": "قيمة إعادة البيع",
+        "en": "Resale value"
+      },
+      "answerType": "Rating5",
+      "options": []
+    }
+  ],
+  "acceptedProofTypes": [
+    "vehicle_license",
+    "purchase_invoice",
+    "service_record"
+  ],
+  "anonymousByDefault": false,
+  "entityFields": [
+    {
+      "key": "brand",
+      "label": {
+        "ar": "الماركة",
+        "en": "Brand"
+      },
+      "type": "text",
+      "options": []
+    },
+    {
+      "key": "model",
+      "label": {
+        "ar": "الموديل",
+        "en": "Model"
+      },
+      "type": "text",
+      "options": []
+    },
+    {
+      "key": "year",
+      "label": {
+        "ar": "سنة الصنع",
+        "en": "Year"
+      },
+      "type": "number",
+      "options": []
+    }
+  ],
+  "verdictEnabled": true,
+  "collectionsEnabled": true,
+  "active": true
+}

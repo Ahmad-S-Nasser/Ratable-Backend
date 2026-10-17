@@ -1,0 +1,103 @@
+{
+  "_id": "hotels-resorts",
+  "name": {
+    "ar": "الفنادق والمنتجعات",
+    "en": "Hotels and resorts"
+  },
+  "icon": "bed",
+  "schemaOrgType": "Hotel",
+  "criteria": [
+    {
+      "id": "cleanliness",
+      "label": {
+        "ar": "النظافة",
+        "en": "Cleanliness"
+      },
+      "answerType": "Rating5",
+      "options": []
+    },
+    {
+      "id": "service",
+      "label": {
+        "ar": "الخدمة",
+        "en": "Service"
+      },
+      "answerType": "Rating5",
+      "options": []
+    },
+    {
+      "id": "location",
+      "label": {
+        "ar": "الموقع",
+        "en": "Location"
+      },
+      "answerType": "Rating5",
+      "options": []
+    },
+    {
+      "id": "food",
+      "label": {
+        "ar": "الأكل",
+        "en": "Food"
+      },
+      "answerType": "Rating5",
+      "options": []
+    },
+    {
+      "id": "room_comfort",
+      "label": {
+        "ar": "راحة الغرفة",
+        "en": "Room comfort"
+      },
+      "answerType": "Rating5",
+      "options": []
+    },
+    {
+      "id": "noise",
+      "label": {
+        "ar": "الهدوء",
+        "en": "Noise"
+      },
+      "answerType": "Rating5",
+      "options": []
+    },
+    {
+      "id": "value",
+      "label": {
+        "ar": "القيمة مقابل السعر",
+        "en": "Value for money"
+      },
+      "answerType": "Rating5",
+      "options": []
+    }
+  ],
+  "acceptedProofTypes": [
+    "booking_confirmation",
+    "invoice",
+    "photo_of_visit"
+  ],
+  "anonymousByDefault": false,
+  "entityFields": [
+    {
+      "key": "stars",
+      "label": {
+        "ar": "عدد النجوم",
+        "en": "Star rating"
+      },
+      "type": "number",
+      "options": []
+    },
+    {
+      "key": "priceBand",
+      "label": {
+        "ar": "فئة السعر",
+        "en": "Price band"
+      },
+      "type": "text",
+      "options": []
+    }
+  ],
+  "verdictEnabled": true,
+  "collectionsEnabled": true,
+  "active": true
+}

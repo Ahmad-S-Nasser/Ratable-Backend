@@ -1,0 +1,105 @@
+{
+  "_id": "compounds",
+  "name": {
+    "ar": "الكمبوندات",
+    "en": "Compounds"
+  },
+  "icon": "building",
+  "schemaOrgType": "LocalBusiness",
+  "criteria": [
+    {
+      "id": "maintenance",
+      "label": {
+        "ar": "الصيانة",
+        "en": "Maintenance"
+      },
+      "answerType": "Rating5",
+      "options": []
+    },
+    {
+      "id": "security",
+      "label": {
+        "ar": "الأمن",
+        "en": "Security"
+      },
+      "answerType": "Rating5",
+      "options": []
+    },
+    {
+      "id": "cleanliness",
+      "label": {
+        "ar": "النظافة",
+        "en": "Cleanliness"
+      },
+      "answerType": "Rating5",
+      "options": []
+    },
+    {
+      "id": "noise",
+      "label": {
+        "ar": "الهدوء",
+        "en": "Noise"
+      },
+      "answerType": "Rating5",
+      "options": []
+    },
+    {
+      "id": "services",
+      "label": {
+        "ar": "الخدمات والمرافق",
+        "en": "Services and facilities"
+      },
+      "answerType": "Rating5",
+      "options": []
+    },
+    {
+      "id": "management",
+      "label": {
+        "ar": "استجابة الإدارة",
+        "en": "Management responsiveness"
+      },
+      "answerType": "Rating5",
+      "options": []
+    },
+    {
+      "id": "value",
+      "label": {
+        "ar": "القيمة مقابل السعر",
+        "en": "Value for money"
+      },
+      "answerType": "Rating5",
+      "options": []
+    }
+  ],
+  "acceptedProofTypes": [
+    "lease_contract",
+    "ownership_contract",
+    "utility_bill",
+    "management_letter",
+    "photo_of_visit"
+  ],
+  "anonymousByDefault": true,
+  "entityFields": [
+    {
+      "key": "developer",
+      "label": {
+        "ar": "المطور",
+        "en": "Developer"
+      },
+      "type": "text",
+      "options": []
+    },
+    {
+      "key": "unitTypes",
+      "label": {
+        "ar": "أنواع الوحدات",
+        "en": "Unit types"
+      },
+      "type": "text",
+      "options": []
+    }
+  ],
+  "verdictEnabled": true,
+  "collectionsEnabled": true,
+  "active": true
+}
