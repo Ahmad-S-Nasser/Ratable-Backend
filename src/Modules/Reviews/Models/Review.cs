@@ -55,6 +55,10 @@ public sealed class ReviewRevision
     public string Language { get; set; } = "ar";
     public DateTime ChangedAt { get; set; } = DateTime.UtcNow;
     [BsonRepresentation(BsonType.ObjectId)] public string ChangedBy { get; set; } = "";
+    /// <summary>When a newer version replaced this one. The edited-on date shown to readers.</summary>
+    public DateTime SupersededAt { get; set; }
+    /// <summary>Whether this version was public when it was replaced. Only versions that were public appear in the public history.</summary>
+    public ReviewStatus StatusWhenSuperseded { get; set; }
     /// <summary>The moderation verdict for this version (filled by the Moderation flow).</summary>
     public string? ModerationVerdict { get; set; }
 }

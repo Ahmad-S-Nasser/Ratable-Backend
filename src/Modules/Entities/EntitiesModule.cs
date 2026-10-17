@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Ratable.Modules.Entities.Data;
 using Ratable.Modules.Entities.Services;
+using Ratable.Shared.Catalog;
 using Ratable.Shared.Data;
 
 namespace Ratable.Modules.Entities;
@@ -21,6 +22,7 @@ public static class EntitiesModule
 
         services.AddSingleton<DuplicateJudge>();
         services.AddSingleton<EntityService>();
+        services.AddSingleton<IEntityCatalog, EntityCatalog>();
         return services;
     }
 }

@@ -11,6 +11,7 @@ using Ratable.Modules.Identity.Endpoints;
 using Ratable.Modules.Insights;
 using Ratable.Modules.Moderation;
 using Ratable.Modules.Reviews;
+using Ratable.Modules.Reviews.Endpoints;
 using Ratable.Modules.Verification;
 using Ratable.Shared.Data;
 using Serilog;
@@ -48,6 +49,8 @@ app.UseAuthorization();
 app.MapIdentityEndpoints();
 app.MapAiEndpoints();
 app.MapEntityEndpoints();
+app.MapCategoryEndpoints();
+app.MapReviewEndpoints();
 
 app.MapOpenApi("/openapi/{documentName}.json");
 

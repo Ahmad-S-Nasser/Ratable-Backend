@@ -1,0 +1,25 @@
+namespace Ratable.Shared.Catalog;
+
+public sealed record EntityRef(string Id, string CategoryId);
+
+public enum CriterionKind { Rating5, Choice, YesNo }
+
+/// <summary>One answer choice and the 1 to 5 score it counts as.</summary>
+public sealed record OptionInfo(string Value, int Score);
+
+public sealed record CriterionInfo(string Id, CriterionKind Kind, IReadOnlyList<OptionInfo> Options);
+
+public sealed record CategoryInfo(string Id, bool AnonymousByDefault, IReadOnlyList<CriterionInfo> Criteria);
+
+/// <summary>
+/// What other modules (Reviews first) may know about entities and categories, without touching the Entities module's collections.
+/// Implemented by the Entities module.
+/// </summary>
+public interface IEntityCatalog
+{
+    /// <summary>The entity, only if it is public (Active). Pending, rejected, hidden and merged entities return null.</summary>
+    Task<EntityRef?> GetActiveEntityAsync(string entityId, CancellationToken cancellationToken = default);
+
+    /// <summary>The category's criteria, only if the category is active.</summary>
+    Task<CategoryInfo?> GetCategoryAsync(string categoryId, CancellationToken cancellationToken = default);
+}

@@ -47,5 +47,11 @@ All AI goes through `IAiClient` (rule 2). It logs every call (model, tokens, cos
 - Merging a duplicate into another entity is described on `EntityService.MergeAsync`: other modules move their data through `IEntityMergeParticipant`, a clash stops the merge, every step can be repeated, and the old id redirects (301) to the survivor.
 - Public reads: `GET /api/entities/{id}` and `GET /api/entities/search?q=` (active entities only, nothing about the submitter).
 
+## Reviews, history and scores (P5)
+- `POST /api/entities/{id}/reviews`, `PUT /api/reviews/{id}`, `DELETE /api/reviews/{id}`, `GET /api/me/reviews`: one review per account per entity; at least one answer (a 1 to 5 tap, or a choice); text optional. A new or edited review is PendingModeration and Unverified until the Moderation and Verification work publishes or verifies it.
+- Editing saves the version it replaces in `review_revisions` (dated); deleting hides the review but keeps its revisions; editing a deleted review restores it.
+- Public: `GET /api/entities/{id}/reviews`, `GET /api/entities/{id}/score`, `GET /api/reviews/{id}/history`, `GET /api/categories[/{id}]`. Public review responses carry no author at all until the anonymity work (P6) adds one behind the leak test.
+- Score rules (`ScoreCalculator`): only Published and Verified reviews count; a review's overall is the average of its answered criteria; the entity's overall is the average of those, every review weighing the same; a per-criterion score appears only after 5 answers.
+
 ## Hosting on IIS
 See `docs/iis.md`.

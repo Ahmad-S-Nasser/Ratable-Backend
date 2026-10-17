@@ -10,7 +10,7 @@ public sealed class EntityRepository(IMongoDatabase database) : MongoRepository<
     public Task InsertAsync(Entity entity, CancellationToken ct = default) => Collection.InsertOneAsync(entity, cancellationToken: ct);
 
     public async Task<Entity?> GetAsync(string id, CancellationToken ct = default) =>
-        await Collection.Find(e => e.Id == id).FirstOrDefaultAsync(ct);
+        MongoDB.Bson.ObjectId.TryParse(id, out _) ? await Collection.Find(e => e.Id == id).FirstOrDefaultAsync(ct) : null;
 
     /// <summary>Replaces the whole document. Sets UpdatedAt (the sitemap lastmod).</summary>
     public Task ReplaceAsync(Entity entity, DateTime now, CancellationToken ct = default)
