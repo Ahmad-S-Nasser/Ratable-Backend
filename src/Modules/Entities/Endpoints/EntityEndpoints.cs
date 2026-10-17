@@ -41,8 +41,8 @@ public static class EntityEndpoints
     public static IEndpointRouteBuilder MapEntityEndpoints(this IEndpointRouteBuilder app)
     {
         var entities = app.MapGroup("/api/entities").WithTags("Entities");
-        entities.MapGet("/search", Search);
-        entities.MapGet("/{id}", Get);
+        entities.MapGet("/search", Search).Produces<List<PublicEntity>>().Produces<ErrorBody>(400);
+        entities.MapGet("/{id}", Get).Produces<PublicEntity>().Produces(404).Produces(301);
         entities.MapPost("", Submit).RequireAuthorization(PolicyNames.SignedIn);
 
         var queue = app.MapGroup("/api/moderation/entities").WithTags("Moderation").RequireAuthorization(PolicyNames.Moderator);

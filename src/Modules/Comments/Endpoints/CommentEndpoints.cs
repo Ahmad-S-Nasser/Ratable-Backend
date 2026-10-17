@@ -26,7 +26,7 @@ public static class CommentEndpoints
     public static IEndpointRouteBuilder MapCommentEndpoints(this IEndpointRouteBuilder app)
     {
         var onReview = app.MapGroup("/api/reviews/{reviewId}/comments").WithTags("Comments");
-        onReview.MapGet("", List);
+        onReview.MapGet("", List).Produces<List<PublicComment>>().Produces(404);
         onReview.MapPost("", Create).RequireAuthorization(PolicyNames.SignedIn);
 
         var comments = app.MapGroup("/api/comments").WithTags("Comments").RequireAuthorization(PolicyNames.SignedIn);

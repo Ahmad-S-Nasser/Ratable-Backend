@@ -22,9 +22,9 @@ public static class CategoryEndpoints
     {
         var group = app.MapGroup("/api/categories").WithTags("Categories");
         group.MapGet("", async (CategoryRepository repository, CancellationToken ct) =>
-            Results.Ok((await repository.ListActiveAsync(ct)).OrderBy(c => c.Id).Select(ToDto)));
+            Results.Ok((await repository.ListActiveAsync(ct)).OrderBy(c => c.Id).Select(ToDto))).Produces<List<CategoryDto>>();
         group.MapGet("/{id}", async (string id, CategoryRepository repository, CancellationToken ct) =>
-            await repository.GetAsync(id, ct) is { Active: true } c ? Results.Ok(ToDto(c)) : Results.NotFound());
+            await repository.GetAsync(id, ct) is { Active: true } c ? Results.Ok(ToDto(c)) : Results.NotFound()).Produces<CategoryDto>().Produces(404);
         return app;
     }
 

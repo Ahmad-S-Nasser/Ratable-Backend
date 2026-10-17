@@ -45,11 +45,11 @@ public static class ReviewEndpoints
     {
         var onEntity = app.MapGroup("/api/entities/{entityId}").WithTags("Reviews");
         onEntity.MapPost("/reviews", Create).RequireAuthorization(PolicyNames.SignedIn);
-        onEntity.MapGet("/reviews", List);
-        onEntity.MapGet("/score", Score);
+        onEntity.MapGet("/reviews", List).Produces<List<PublicReview>>().Produces(404);
+        onEntity.MapGet("/score", Score).Produces<ScoreResponse>().Produces(404);
 
         var reviews = app.MapGroup("/api/reviews").WithTags("Reviews");
-        reviews.MapGet("/{id}/history", History);
+        reviews.MapGet("/{id}/history", History).Produces<ReviewHistory>().Produces(404);
         reviews.MapPut("/{id}", Edit).RequireAuthorization(PolicyNames.SignedIn);
         reviews.MapPut("/{id}/anonymity", SetAnonymity).RequireAuthorization(PolicyNames.SignedIn);
         reviews.MapDelete("/{id}", Delete).RequireAuthorization(PolicyNames.SignedIn);
