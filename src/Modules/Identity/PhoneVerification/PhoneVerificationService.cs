@@ -74,9 +74,10 @@ public sealed partial class PhoneVerificationService(
             (deviceHash is not null && await verifications.CountForDeviceSinceAsync(deviceHash, now.AddDays(-1), ct) >= Opt.VerifyStartsPerDevicePerDay))
             return (new(VerifyFailure.RateLimited, RetryAfterSeconds: 3600), null, null);
 
-        // Only so many verified accounts may share a device.
-        var deviceKey = deviceHash ?? ipHash;
-        if (await CountVerifiedAccountsOnDeviceAsync(deviceKey, user.Id, ct) >= Opt.VerifiedAccountsPerDevice) return (new(VerifyFailure.TooManyAccountsOnDevice), null, null);
+        // Only so many verified accounts may share a device. The web has no device id, and a network address says little about a device (a whole mobile
+        // carrier or office can share one), so the device rule applies only where the app sends a device id; the web is limited per number and per network.
+        if (deviceHash is not null && await CountVerifiedAccountsOnDeviceAsync(deviceHash, user.Id, ct) >= Opt.VerifiedAccountsPerDevice)
+            return (new(VerifyFailure.TooManyAccountsOnDevice), null, null);
 
         var code = NewCode();
         var record = new PhoneVerification

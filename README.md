@@ -85,3 +85,13 @@ The Media module takes photos and videos for a review. The author asks for a sig
 - A person approves everything. A video the AI could not check is retried later and cannot be approved without it. Nothing is public before approval, and a video that was not protected for an anonymous author is never shown for an anonymous review.
 - Settings (environment): `Media__StoragePath` (private folder), `Media__SigningKey` (32 random bytes, base64), `Media__FfmpegPath` and `Media__FfprobePath` (ffmpeg must be installed on the server; without it videos end as "processor unavailable" and photos still work), `Media__WorkerEnabled`.
 - The AI contract for the three features is in `docs/ai-integration.md`.
+
+## Rewards, places near you, verdicts and lists (P9f and P9g)
+- Points ledger (Contributions module): append-only, one payment per (user, action, reference), cancelled together when a review is hidden or deleted, reversible by an admin with a reason. Ranks, badges, missions, point values and daily caps are in the `Rewards` configuration section. Points are an input to nothing: tests prove a score, a verdict and the order of places do not change.
+- Verdict (`Reviews:Verdicts`): worked out from verified reviews only, beside the score. Lists are configuration (`src/Modules/Reviews/Lists/*.json`, loaded once into `collection_lists`).
+- Location: `ILocationProvider` backed by seeded areas (`src/Modules/Entities/Areas/areas.json`, 2dsphere index). `GET /api/places?lat&lng&radiusKm&area&category` accepts 1, 3, 5, 10 or 25 km. The visitor location can travel in the `X-Visitor-Location: lat,lng` header; it is used for the answer only and is never stored or logged.
+
+## Verify via WhatsApp and social sign-in (P9h)
+- Settings: `Identity__WhatsAppNumber`, `Identity__WhatsAppAppSecret`, `Identity__WhatsAppVerifyToken`, optional `Identity__GoogleClientId`, `Identity__AppleClientId`, `Identity__BlockedPhonePrefixes__0..`.
+- WhatsApp Cloud API webhook: `GET/POST /api/webhooks/whatsapp` (signed with the app secret; unsigned calls are refused). Flow: `POST /api/me/phone/verify/start` (default reverse route: code shown once, `wa.me` link with the code typed in), the person sends the message, the webhook matches the code and the sender's number, `GET /api/me/phone/verify/status`. The code route (`route: "code"`) needs a provider behind `IVerificationCodeSender`.
+- Verification sets only `PhoneVerified`. It never changes a score.

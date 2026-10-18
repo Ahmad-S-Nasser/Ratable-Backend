@@ -38,10 +38,10 @@ public sealed class IdentityOptions
     public int VerifyCodeLifetimeMinutes { get; set; } = 10;
     public int VerifyMaxAttempts { get; set; } = 5;
     public int VerifyStartsPerPhonePerHour { get; set; } = 3;
-    public int VerifyStartsPerIpPerHour { get; set; } = 10;
+    public int VerifyStartsPerIpPerHour { get; set; } = 30;
     public int VerifyStartsPerDevicePerDay { get; set; } = 5;
 
-    /// <summary>How many accounts with a verified phone may share one device (the network, on the web).</summary>
+    /// <summary>How many accounts with a verified phone may share one device. Applies where the app sends a device id.</summary>
     public int VerifiedAccountsPerDevice { get; set; } = 3;
 
     // ---- Google and Apple sign-in: the client ids the ID tokens must be made for. Leave empty to turn a provider off. ----
