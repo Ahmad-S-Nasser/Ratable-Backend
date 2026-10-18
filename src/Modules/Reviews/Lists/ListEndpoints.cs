@@ -41,14 +41,14 @@ public static class ListEndpoints
     }
 
     private static async Task<IResult> Get(
-        string id, string? lang, double? lat, double? lng, ListRepository lists, ReviewRepository repository, IEntityCatalog catalog, IOptions<VerdictOptions> verdictOptions, CancellationToken ct)
+        string id, string? lang, double? lat, double? lng, HttpRequest http, ListRepository lists, ReviewRepository repository, IEntityCatalog catalog, IOptions<VerdictOptions> verdictOptions, CancellationToken ct)
     {
         var list = await lists.GetAsync(id, ct);
         if (list is null || await catalog.GetCategoryAsync(list.CategoryId, ct) is null) return Results.NotFound();
 
         var entries = (await catalog.ListActiveByCategoryAsync(list.CategoryId, 500, ct)).Where(e => InArea(e, list.Area)).ToList();
         var reviews = (await repository.ListScoringForEntitiesAsync([.. entries.Select(e => e.Id)], ct)).ToLookup(r => r.EntityId);
-        var ranked = PlaceRanking.Rank(entries, reviews, verdictOptions.Value, lang ?? "ar", lat is { } a && lng is { } b ? (a, b) : null)
+        var ranked = PlaceRanking.Rank(entries, reviews, verdictOptions.Value, lang ?? "ar", VisitorLocation.From(http, lat, lng))
             .Where(p => p.Overall.HasValue && p.VerifiedReviews >= list.MinReviews) // only places with a verified score; never on promise
             .Take(Math.Clamp(list.Limit, 1, 50)).ToList();
 

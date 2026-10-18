@@ -288,4 +288,26 @@ public sealed class VerdictAndListTests
             Assert.DoesNotContain(userId, body);
         }
     }
+    [MongoFact]
+    public async Task The_visitor_location_can_travel_in_a_header_and_is_not_kept()
+    {
+        await using var api = new IdentityApiFactory();
+        var place = await Place(api, "compounds", "Header Gardens", "Cairo", lon: 31.2357, lat: 30.0444);
+        for (var i = 0; i < 3; i++) await Seed(api, place.Id, null, 5);
+
+        using var http = api.CreateClient();
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/collections/L01");
+        request.Headers.Add("X-Visitor-Location", "30.0600,31.2300");
+        var located = System.Text.Json.JsonDocument.Parse(await (await http.SendAsync(request)).Content.ReadAsStringAsync()).RootElement.GetProperty("places")[0];
+        Assert.InRange(located.GetProperty("distanceMeters").GetDouble(), 1000, 3000);
+
+        // Nothing is remembered: the next request without the header has no distance, and a bad header is ignored.
+        var plain = (await Send(api, HttpMethod.Get, "/api/collections/L01")).Json.GetProperty("places")[0];
+        Assert.Equal(System.Text.Json.JsonValueKind.Null, plain.GetProperty("distanceMeters").ValueKind);
+        using var bad = new HttpRequestMessage(HttpMethod.Get, "/api/collections/L01");
+        bad.Headers.Add("X-Visitor-Location", "not,a-place");
+        var ignored = System.Text.Json.JsonDocument.Parse(await (await http.SendAsync(bad)).Content.ReadAsStringAsync()).RootElement.GetProperty("places")[0];
+        Assert.Equal(System.Text.Json.JsonValueKind.Null, ignored.GetProperty("distanceMeters").ValueKind);
+        Assert.DoesNotContain(api.Logs.Lines, l => l.Contains("30.0600") || l.Contains("31.2300"));
+    }
 }

@@ -78,14 +78,14 @@ public static class ReviewEndpoints
     /// last. Nothing paid changes the order (rule 6). Scores are worked out per request over at most 500 places; storing them is a later optimisation.
     /// </summary>
     private static async Task<IResult> Places(
-        string categoryId, int? limit, int? skip, string? lang, double? lat, double? lng, ReviewRepository repository, IEntityCatalog catalog,
+        string categoryId, int? limit, int? skip, string? lang, double? lat, double? lng, HttpRequest http, ReviewRepository repository, IEntityCatalog catalog,
         IOptions<VerdictOptions> verdictOptions, CancellationToken ct)
     {
         if (await catalog.GetCategoryAsync(categoryId, ct) is null) return Results.NotFound();
         var entries = await catalog.ListActiveByCategoryAsync(categoryId, 500, ct);
         var reviews = (await repository.ListScoringForEntitiesAsync([.. entries.Select(e => e.Id)], ct)).ToLookup(r => r.EntityId);
         // The visitor's location is used for this answer only: it is not stored anywhere and does not change the order.
-        var ranked = PlaceRanking.Rank(entries, reviews, verdictOptions.Value, lang ?? "ar", lat is { } a && lng is { } b ? (a, b) : null);
+        var ranked = PlaceRanking.Rank(entries, reviews, verdictOptions.Value, lang ?? "ar", VisitorLocation.From(http, lat, lng));
         var page = ranked.Skip(Math.Max(0, skip ?? 0)).Take(Math.Clamp(limit ?? 20, 1, 50)).ToList();
         return Results.Ok(new PlaceList(page, ranked.Count));
     }
