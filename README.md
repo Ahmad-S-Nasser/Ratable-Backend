@@ -76,3 +76,12 @@ All AI goes through `IAiClient` (rule 2). It logs every call (model, tokens, cos
 
 ## Hosting on IIS
 See `docs/iis.md`.
+
+## Photos and video (P9e)
+The Media module takes photos and videos for a review. The author asks for a signed upload address, sends the file in pieces (it can resume after a break), and a background worker processes it:
+- Checks: the real file type from its first bytes, one video (up to 60 seconds and 100 MB) and up to 4 photos (10 MB each) per review.
+- Photos: location, device, time and author data are stripped without re-encoding.
+- Videos (ffmpeg): sample pictures and the sound go through `IAiClient` (`video_frames`, `video_audio`); children's faces and number plates are always blurred; for an anonymous author every face is blurred and the voice is changed, otherwise the video is refused; metadata is dropped; an adaptive HLS stream (720p and 480p), cover candidates and Arabic and English captions (stored as text) are produced; the original is deleted.
+- A person approves everything. A video the AI could not check is retried later and cannot be approved without it. Nothing is public before approval, and a video that was not protected for an anonymous author is never shown for an anonymous review.
+- Settings (environment): `Media__StoragePath` (private folder), `Media__SigningKey` (32 random bytes, base64), `Media__FfmpegPath` and `Media__FfprobePath` (ffmpeg must be installed on the server; without it videos end as "processor unavailable" and photos still work), `Media__WorkerEnabled`.
+- The AI contract for the three features is in `docs/ai-integration.md`.

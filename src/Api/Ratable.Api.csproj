@@ -22,6 +22,7 @@
     <ProjectReference Include="..\Modules\Entities\Ratable.Modules.Entities.csproj" />
     <ProjectReference Include="..\Modules\Identity\Ratable.Modules.Identity.csproj" />
     <ProjectReference Include="..\Modules\Insights\Ratable.Modules.Insights.csproj" />
+    <ProjectReference Include="..\Modules\Media\Ratable.Modules.Media.csproj" />
     <ProjectReference Include="..\Modules\Moderation\Ratable.Modules.Moderation.csproj" />
     <ProjectReference Include="..\Modules\Reviews\Ratable.Modules.Reviews.csproj" />
     <ProjectReference Include="..\Modules\Verification\Ratable.Modules.Verification.csproj" />

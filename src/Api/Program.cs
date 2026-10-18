@@ -10,6 +10,8 @@ using Ratable.Modules.Entities.Endpoints;
 using Ratable.Modules.Identity;
 using Ratable.Modules.Identity.Endpoints;
 using Ratable.Modules.Insights;
+using Ratable.Modules.Media;
+using Ratable.Modules.Media.Endpoints;
 using Ratable.Modules.Moderation;
 using Ratable.Modules.Moderation.Endpoints;
 using Ratable.Modules.Reviews;
@@ -39,6 +41,7 @@ builder.Services
     .AddReviewsModule(builder.Configuration)
     .AddCommentsModule(builder.Configuration)
     .AddVerificationModule(builder.Configuration)
+    .AddMediaModule(builder.Configuration)
     .AddModerationModule(builder.Configuration)
     .AddBusinessesModule(builder.Configuration)
     .AddInsightsModule(builder.Configuration)
@@ -60,6 +63,7 @@ app.MapReviewEndpoints();
 app.MapCommentEndpoints();
 app.MapModerationEndpoints();
 app.MapVerificationEndpoints();
+app.MapMediaEndpoints();
 
 app.MapOpenApi("/openapi/{documentName}.json");
 
