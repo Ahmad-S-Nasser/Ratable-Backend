@@ -47,7 +47,7 @@ public sealed record ScoreResponse(double? Overall, int VerifiedReviews, int Pub
 
 /// <summary>A place in a category listing: its verified score and how many verified reviews that is built from. Nothing here depends on payment.</summary>
 public sealed record PlaceCard(string Id, LocalizedText Name, Dictionary<string, string> Slugs, string? City, double? Overall, int VerifiedReviews, DateTime LastModified,
-    VerdictDto? Verdict = null, string? PriceBand = null, double? DistanceMeters = null, List<string>? TopCriteria = null);
+    VerdictDto? Verdict = null, string? PriceBand = null, double? DistanceMeters = null, List<string>? TopCriteria = null, string? CategoryId = null);
 
 public sealed record PlaceList(List<PlaceCard> Places, int Total);
 

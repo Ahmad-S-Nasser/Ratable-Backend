@@ -24,6 +24,30 @@ public sealed class IdentityOptions
     public int OtpPerIpPerHour { get; set; } = 20;
     public int OtpResendSeconds { get; set; } = 60;
 
+    // ---- Verify via WhatsApp (rule 18) ----
+
+    /// <summary>Ratable's own WhatsApp number in international form, for the reverse route (the person messages this number). Identity__WhatsAppNumber.</summary>
+    public string WhatsAppNumber { get; set; } = "";
+
+    /// <summary>The token set in the WhatsApp Cloud API webhook set-up screen. Identity__WhatsAppVerifyToken.</summary>
+    public string WhatsAppVerifyToken { get; set; } = "";
+
+    /// <summary>The WhatsApp app secret. Every webhook call is signed with it, and unsigned calls are refused. Identity__WhatsAppAppSecret.</summary>
+    public string WhatsAppAppSecret { get; set; } = "";
+
+    public int VerifyCodeLifetimeMinutes { get; set; } = 10;
+    public int VerifyMaxAttempts { get; set; } = 5;
+    public int VerifyStartsPerPhonePerHour { get; set; } = 3;
+    public int VerifyStartsPerIpPerHour { get; set; } = 10;
+    public int VerifyStartsPerDevicePerDay { get; set; } = 5;
+
+    /// <summary>How many accounts with a verified phone may share one device (the network, on the web).</summary>
+    public int VerifiedAccountsPerDevice { get; set; } = 3;
+
+    // ---- Google and Apple sign-in: the client ids the ID tokens must be made for. Leave empty to turn a provider off. ----
+    public string GoogleClientId { get; set; } = "";
+    public string AppleClientId { get; set; } = "";
+
     public int WebSessionDays { get; set; } = 30;
     public int AppSessionDays { get; set; } = 90;
 

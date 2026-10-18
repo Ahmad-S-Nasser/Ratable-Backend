@@ -49,6 +49,13 @@ public sealed class SessionRepository(IMongoDatabase database) : MongoRepository
     public async Task<Session?> GetLatestForUserAsync(string userId, CancellationToken ct = default) =>
         await Collection.Find(s => s.UserId == userId).SortByDescending(s => s.CreatedAt).FirstOrDefaultAsync(ct);
 
+    /// <summary>The accounts that signed in from this device (or, on the web, this network) in the last 30 days. The key is already a hash.</summary>
+    public async Task<List<string>> ListUserIdsForDeviceAsync(string deviceKey, CancellationToken ct = default)
+    {
+        var since = DateTime.UtcNow.AddDays(-30);
+        return await Collection.Find(s => (s.DeviceHash == deviceKey || s.IpHash == deviceKey) && s.CreatedAt >= since).Project(s => s.UserId).ToListAsync(ct);
+    }
+
     public Task RevokeAsync(string tokenHash, DateTime now, CancellationToken ct = default) =>
         Collection.UpdateOneAsync(s => s.TokenHash == tokenHash && s.RevokedAt == null,
             Builders<Session>.Update.Set(s => s.RevokedAt, now), cancellationToken: ct);

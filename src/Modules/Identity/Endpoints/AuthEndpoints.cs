@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Ratable.Modules.Identity.Auth;
 using Ratable.Modules.Identity.Data;
 using Ratable.Modules.Identity.Models;
@@ -11,6 +12,10 @@ using Ratable.Modules.Identity.Services;
 namespace Ratable.Modules.Identity.Endpoints;
 
 public sealed record OtpRequestBody(string? Phone);
+public sealed record ExternalSignInBody(string? Provider, string? IdToken, string? Client);
+
+/// <summary>Which ways to sign in are on. The client ids are public (the web page needs them to show the Google and Apple buttons).</summary>
+public sealed record SignInProviders(bool Phone, string? GoogleClientId, string? AppleClientId);
 public sealed record OtpVerifyBody(string? Phone, string? Code, string? Client);
 public sealed record ProfileBody(string? DisplayName, string? AvatarUrl, List<string>? Interests = null, string? AreaId = null);
 public sealed record RolesBody(List<string>? Roles);
@@ -30,6 +35,8 @@ public static class AuthEndpoints
         auth.MapPost("/otp/request", RequestOtp).Produces<OtpRequestedResponse>(StatusCodes.Status202Accepted);
         auth.MapPost("/otp/verify", VerifyOtp).Produces<SignedInWebResponse>();
         auth.MapPost("/logout", Logout).Produces(StatusCodes.Status204NoContent);
+        auth.MapGet("/providers", Providers).Produces<SignInProviders>();
+        auth.MapPost("/external", External).Produces<SignedInWebResponse>().Produces<ErrorBody>(400).Produces<ErrorBody>(401).Produces<ErrorBody>(403);
 
         var me = app.MapGroup("/api/me").WithTags("Me").RequireAuthorization(RatableAuth.Policies.SignedIn);
         me.MapGet("", GetMe).Produces<MeResponse>();
@@ -87,6 +94,49 @@ public static class AuthEndpoints
             Expires = issued.ExpiresAt,
             Path = "/",
         });
+        return Results.Ok(new SignedInWebResponse(me));
+    }
+
+    private static IResult Providers(IOptions<IdentityOptions> options)
+    {
+        var o = options.Value;
+        return Results.Ok(new SignInProviders(true, string.IsNullOrWhiteSpace(o.GoogleClientId) ? null : o.GoogleClientId, string.IsNullOrWhiteSpace(o.AppleClientId) ? null : o.AppleClientId));
+    }
+
+    /// <summary>
+    /// Continue with Google or Apple: the browser or app sends the ID token the provider gave it, the token is checked against the provider's published keys,
+    /// and the person is signed in to the account for that provider's subject (created on first use). No name or email is kept.
+    /// </summary>
+    private static async Task<IResult> External(
+        ExternalSignInBody body, HttpContext http, IEnumerable<IExternalIdTokenVerifier> verifiers, UserRepository users, SessionService sessions, IHostEnvironment env, CancellationToken ct)
+    {
+        var client = (body.Client ?? "web").ToLowerInvariant();
+        if (client is not ("web" or "app")) return Results.BadRequest(new ErrorBody("invalid_client"));
+        var verifier = verifiers.FirstOrDefault(v => string.Equals(v.Provider, body.Provider, StringComparison.OrdinalIgnoreCase));
+        if (verifier is null || string.IsNullOrWhiteSpace(body.IdToken)) return Results.BadRequest(new ErrorBody("provider_unavailable"));
+
+        var identity = await verifier.VerifyAsync(body.IdToken, ct);
+        if (identity is null) return Results.Json(new ErrorBody("invalid_token"), statusCode: StatusCodes.Status401Unauthorized);
+
+        var user = await users.GetByLoginAsync(identity.Provider, identity.Subject, ct);
+        if (user is null)
+        {
+            user = new User { Logins = [new ExternalLogin { Provider = identity.Provider, Subject = identity.Subject }] };
+            try
+            {
+                await users.InsertAsync(user, ct);
+            }
+            catch (MongoDB.Driver.MongoWriteException ex) when (ex.WriteError.Category == MongoDB.Driver.ServerErrorCategory.DuplicateKey)
+            {
+                user = await users.GetByLoginAsync(identity.Provider, identity.Subject, ct); // two quick first sign-ins: the second finds the first
+            }
+        }
+        if (user is null || user.Status != UserStatus.Active) return Results.Json(new ErrorBody("account_suspended"), statusCode: StatusCodes.Status403Forbidden);
+
+        var issued = await sessions.CreateAsync(user.Id, client == "web" ? SessionKind.Web : SessionKind.App, http.Connection.RemoteIpAddress?.ToString(), http.Request.Headers["X-Device-Id"].ToString(), ct);
+        var me = ToMe(user);
+        if (client == "app") return Results.Ok(new SignedInAppResponse(issued.Token, issued.ExpiresAt, me));
+        http.Response.Cookies.Append(RatableAuth.CookieName, issued.Token, new CookieOptions { HttpOnly = true, Secure = !env.IsDevelopment(), SameSite = SameSiteMode.Lax, Expires = issued.ExpiresAt, Path = "/" });
         return Results.Ok(new SignedInWebResponse(me));
     }
 

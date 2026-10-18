@@ -42,7 +42,7 @@ public static class PlaceRanking
         return new PlaceCard(
             e.Id, e.Name, new Dictionary<string, string>(e.Slugs), e.City, score.Overall, score.VerifiedReviewCount, e.UpdatedAt > latest ? e.UpdatedAt : latest,
             verdict is null ? null : new VerdictDto(verdict.Kind, verdict.SharePercent, verdict.Votes), string.IsNullOrWhiteSpace(price) ? null : price, distance,
-            TopCriteria(score));
+            TopCriteria(score), e.CategoryId);
     }
 
     /// <summary>The criteria with a shown score of at least 4: what verified reviewers rate highest. Used as the tags on a card.</summary>

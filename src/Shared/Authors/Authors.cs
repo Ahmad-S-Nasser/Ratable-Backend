@@ -1,9 +1,9 @@
 namespace Ratable.Shared.Authors;
 
 /// <summary>What the public may see of a named author.</summary>
-public sealed record PublicAuthor(string Name, string? AvatarUrl);
+public sealed record PublicAuthor(string Name, string? AvatarUrl, bool AccountVerified = false);
 
-public sealed record PublicProfile(string? DisplayName, string? AvatarUrl);
+public sealed record PublicProfile(string? DisplayName, string? AvatarUrl, bool AccountVerified = false);
 
 /// <summary>One item whose author is to be presented. <see cref="Key"/> is the caller's own id for the item (a review id, a comment id).</summary>
 public sealed record AuthorSlot(string Key, string UserId, bool IsAnonymous);
@@ -45,7 +45,7 @@ public sealed class AuthorPresenter(IPublicProfiles profiles) : IAuthorPresenter
             var found = await profiles.GetAsync([.. named.Select(n => n.UserId).Distinct()], ct);
             foreach (var slot in named)
                 result[slot.Key] = found.TryGetValue(slot.UserId, out var p) && !string.IsNullOrWhiteSpace(p.DisplayName)
-                    ? new PublicAuthor(p.DisplayName.Trim(), p.AvatarUrl)
+                    ? new PublicAuthor(p.DisplayName.Trim(), p.AvatarUrl, p.AccountVerified)
                     : null;
         }
         return result;

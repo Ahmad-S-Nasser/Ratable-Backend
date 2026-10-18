@@ -10,7 +10,7 @@ namespace Ratable.Modules.Identity.Services;
 public sealed class IdentityDirectory(UserRepository users) : IPublicProfiles, IAccountDirectory
 {
     public async Task<IReadOnlyDictionary<string, PublicProfile>> GetAsync(IReadOnlyCollection<string> userIds, CancellationToken ct = default) =>
-        (await users.ListByIdsAsync(userIds, ct)).ToDictionary(u => u.Id, u => new PublicProfile(u.Profile.DisplayName, u.Profile.AvatarUrl));
+        (await users.ListByIdsAsync(userIds, ct)).ToDictionary(u => u.Id, u => new PublicProfile(u.Profile.DisplayName, u.Profile.AvatarUrl, u.PhoneVerified));
 
     async Task<AccountSummary?> IAccountDirectory.GetAsync(string userId, CancellationToken ct)
     {
