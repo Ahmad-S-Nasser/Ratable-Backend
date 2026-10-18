@@ -1,0 +1,452 @@
+[
+ {
+  "_id": "cairo",
+  "name": {
+   "ar": "القاهرة",
+   "en": "Cairo"
+  },
+  "country": "EG",
+  "kind": "city",
+  "location": {
+   "type": "Point",
+   "coordinates": [
+    31.2357,
+    30.0444
+   ]
+  },
+  "radiusKm": 25,
+  "active": true
+ },
+ {
+  "_id": "giza",
+  "name": {
+   "ar": "الجيزة",
+   "en": "Giza"
+  },
+  "country": "EG",
+  "kind": "city",
+  "location": {
+   "type": "Point",
+   "coordinates": [
+    31.2089,
+    30.0131
+   ]
+  },
+  "radiusKm": 15,
+  "active": true
+ },
+ {
+  "_id": "alexandria",
+  "name": {
+   "ar": "الإسكندرية",
+   "en": "Alexandria"
+  },
+  "country": "EG",
+  "kind": "city",
+  "location": {
+   "type": "Point",
+   "coordinates": [
+    29.9187,
+    31.2001
+   ]
+  },
+  "radiusKm": 20,
+  "active": true
+ },
+ {
+  "_id": "new-cairo",
+  "name": {
+   "ar": "القاهرة الجديدة",
+   "en": "New Cairo"
+  },
+  "country": "EG",
+  "kind": "district",
+  "location": {
+   "type": "Point",
+   "coordinates": [
+    31.4913,
+    30.0074
+   ]
+  },
+  "radiusKm": 12,
+  "active": true
+ },
+ {
+  "_id": "sheikh-zayed",
+  "name": {
+   "ar": "الشيخ زايد",
+   "en": "Sheikh Zayed"
+  },
+  "country": "EG",
+  "kind": "district",
+  "location": {
+   "type": "Point",
+   "coordinates": [
+    30.97,
+    30.02
+   ]
+  },
+  "radiusKm": 8,
+  "active": true
+ },
+ {
+  "_id": "october-6",
+  "name": {
+   "ar": "6 أكتوبر",
+   "en": "6th of October"
+  },
+  "country": "EG",
+  "kind": "district",
+  "location": {
+   "type": "Point",
+   "coordinates": [
+    30.9188,
+    29.9285
+   ]
+  },
+  "radiusKm": 15,
+  "active": true
+ },
+ {
+  "_id": "maadi",
+  "name": {
+   "ar": "المعادي",
+   "en": "Maadi"
+  },
+  "country": "EG",
+  "kind": "district",
+  "location": {
+   "type": "Point",
+   "coordinates": [
+    31.2569,
+    29.9602
+   ]
+  },
+  "radiusKm": 6,
+  "active": true
+ },
+ {
+  "_id": "nasr-city",
+  "name": {
+   "ar": "مدينة نصر",
+   "en": "Nasr City"
+  },
+  "country": "EG",
+  "kind": "district",
+  "location": {
+   "type": "Point",
+   "coordinates": [
+    31.3656,
+    30.0511
+   ]
+  },
+  "radiusKm": 8,
+  "active": true
+ },
+ {
+  "_id": "heliopolis",
+  "name": {
+   "ar": "مصر الجديدة",
+   "en": "Heliopolis"
+  },
+  "country": "EG",
+  "kind": "district",
+  "location": {
+   "type": "Point",
+   "coordinates": [
+    31.3225,
+    30.0875
+   ]
+  },
+  "radiusKm": 6,
+  "active": true
+ },
+ {
+  "_id": "mansoura",
+  "name": {
+   "ar": "المنصورة",
+   "en": "Mansoura"
+  },
+  "country": "EG",
+  "kind": "city",
+  "location": {
+   "type": "Point",
+   "coordinates": [
+    31.3785,
+    31.0409
+   ]
+  },
+  "radiusKm": 10,
+  "active": true
+ },
+ {
+  "_id": "hurghada",
+  "name": {
+   "ar": "الغردقة",
+   "en": "Hurghada"
+  },
+  "country": "EG",
+  "kind": "city",
+  "location": {
+   "type": "Point",
+   "coordinates": [
+    33.8116,
+    27.2579
+   ]
+  },
+  "radiusKm": 20,
+  "active": true
+ },
+ {
+  "_id": "sharm-el-sheikh",
+  "name": {
+   "ar": "شرم الشيخ",
+   "en": "Sharm El Sheikh"
+  },
+  "country": "EG",
+  "kind": "city",
+  "location": {
+   "type": "Point",
+   "coordinates": [
+    34.33,
+    27.9158
+   ]
+  },
+  "radiusKm": 15,
+  "active": true
+ },
+ {
+  "_id": "riyadh",
+  "name": {
+   "ar": "الرياض",
+   "en": "Riyadh"
+  },
+  "country": "SA",
+  "kind": "city",
+  "location": {
+   "type": "Point",
+   "coordinates": [
+    46.6753,
+    24.7136
+   ]
+  },
+  "radiusKm": 30,
+  "active": true
+ },
+ {
+  "_id": "jeddah",
+  "name": {
+   "ar": "جدة",
+   "en": "Jeddah"
+  },
+  "country": "SA",
+  "kind": "city",
+  "location": {
+   "type": "Point",
+   "coordinates": [
+    39.1925,
+    21.4858
+   ]
+  },
+  "radiusKm": 25,
+  "active": true
+ },
+ {
+  "_id": "makkah",
+  "name": {
+   "ar": "مكة المكرمة",
+   "en": "Makkah"
+  },
+  "country": "SA",
+  "kind": "city",
+  "location": {
+   "type": "Point",
+   "coordinates": [
+    39.8579,
+    21.3891
+   ]
+  },
+  "radiusKm": 15,
+  "active": true
+ },
+ {
+  "_id": "madinah",
+  "name": {
+   "ar": "المدينة المنورة",
+   "en": "Madinah"
+  },
+  "country": "SA",
+  "kind": "city",
+  "location": {
+   "type": "Point",
+   "coordinates": [
+    39.5692,
+    24.5247
+   ]
+  },
+  "radiusKm": 15,
+  "active": true
+ },
+ {
+  "_id": "dammam",
+  "name": {
+   "ar": "الدمام",
+   "en": "Dammam"
+  },
+  "country": "SA",
+  "kind": "city",
+  "location": {
+   "type": "Point",
+   "coordinates": [
+    50.0888,
+    26.4207
+   ]
+  },
+  "radiusKm": 15,
+  "active": true
+ },
+ {
+  "_id": "khobar",
+  "name": {
+   "ar": "الخبر",
+   "en": "Al Khobar"
+  },
+  "country": "SA",
+  "kind": "city",
+  "location": {
+   "type": "Point",
+   "coordinates": [
+    50.2083,
+    26.2794
+   ]
+  },
+  "radiusKm": 10,
+  "active": true
+ },
+ {
+  "_id": "dubai",
+  "name": {
+   "ar": "دبي",
+   "en": "Dubai"
+  },
+  "country": "AE",
+  "kind": "city",
+  "location": {
+   "type": "Point",
+   "coordinates": [
+    55.2708,
+    25.2048
+   ]
+  },
+  "radiusKm": 25,
+  "active": true
+ },
+ {
+  "_id": "abu-dhabi",
+  "name": {
+   "ar": "أبوظبي",
+   "en": "Abu Dhabi"
+  },
+  "country": "AE",
+  "kind": "city",
+  "location": {
+   "type": "Point",
+   "coordinates": [
+    54.3773,
+    24.4539
+   ]
+  },
+  "radiusKm": 25,
+  "active": true
+ },
+ {
+  "_id": "sharjah",
+  "name": {
+   "ar": "الشارقة",
+   "en": "Sharjah"
+  },
+  "country": "AE",
+  "kind": "city",
+  "location": {
+   "type": "Point",
+   "coordinates": [
+    55.4209,
+    25.3463
+   ]
+  },
+  "radiusKm": 12,
+  "active": true
+ },
+ {
+  "_id": "doha",
+  "name": {
+   "ar": "الدوحة",
+   "en": "Doha"
+  },
+  "country": "QA",
+  "kind": "city",
+  "location": {
+   "type": "Point",
+   "coordinates": [
+    51.531,
+    25.2854
+   ]
+  },
+  "radiusKm": 15,
+  "active": true
+ },
+ {
+  "_id": "kuwait-city",
+  "name": {
+   "ar": "مدينة الكويت",
+   "en": "Kuwait City"
+  },
+  "country": "KW",
+  "kind": "city",
+  "location": {
+   "type": "Point",
+   "coordinates": [
+    47.9774,
+    29.3759
+   ]
+  },
+  "radiusKm": 15,
+  "active": true
+ },
+ {
+  "_id": "manama",
+  "name": {
+   "ar": "المنامة",
+   "en": "Manama"
+  },
+  "country": "BH",
+  "kind": "city",
+  "location": {
+   "type": "Point",
+   "coordinates": [
+    50.586,
+    26.2285
+   ]
+  },
+  "radiusKm": 10,
+  "active": true
+ },
+ {
+  "_id": "muscat",
+  "name": {
+   "ar": "مسقط",
+   "en": "Muscat"
+  },
+  "country": "OM",
+  "kind": "city",
+  "location": {
+   "type": "Point",
+   "coordinates": [
+    58.3829,
+    23.588
+   ]
+  },
+  "radiusKm": 20,
+  "active": true
+ }
+]

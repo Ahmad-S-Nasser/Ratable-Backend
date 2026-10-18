@@ -68,6 +68,8 @@ app.MapVerificationEndpoints();
 app.MapMediaEndpoints();
 app.MapListEndpoints();
 app.MapRewardsEndpoints();
+app.MapAreaEndpoints();
+app.MapNearbyEndpoints();
 app.MapReviewVoteEndpoints();
 
 app.MapOpenApi("/openapi/{documentName}.json");

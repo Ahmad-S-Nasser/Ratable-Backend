@@ -11,6 +11,12 @@ public sealed class UserProfile
 {
     public string? DisplayName { get; set; }
     public string? AvatarUrl { get; set; }
+
+    /// <summary>Category ids chosen in onboarding (at least 3). Used to tune what the home page shows; never public.</summary>
+    public List<string> Interests { get; set; } = [];
+
+    /// <summary>The area (city) chosen in onboarding, an id from the area list. This is a choice, not a tracked location.</summary>
+    public string? AreaId { get; set; }
 }
 
 public sealed class ExternalLogin

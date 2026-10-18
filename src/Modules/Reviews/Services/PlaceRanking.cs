@@ -21,6 +21,16 @@ public static class PlaceRanking
             .ThenBy(p => key == "en" ? p.Name.En ?? p.Name.Ar : p.Name.Ar ?? p.Name.En, StringComparer.CurrentCulture)];
     }
 
+    /// <summary>
+    /// The nearby order (rule 17): verified score first, then distance (nearest first). Places without a verified score follow, nearest first. Only places
+    /// inside the distance are kept, however the database returned them.
+    /// </summary>
+    public static List<PlaceCard> RankNearby(IEnumerable<CatalogEntry> entries, ILookup<string, Review> reviews, VerdictOptions verdictOptions, string lang, (double Lat, double Lng) from, double maxMeters) =>
+        [.. entries
+            .Select(e => ToCard(e, reviews[e.Id].ToList(), verdictOptions, from))
+            .Where(p => p.DistanceMeters is { } d && d <= maxMeters)
+            .OrderByDescending(p => p.Overall.HasValue).ThenByDescending(p => p.Overall).ThenBy(p => p.DistanceMeters)];
+
     public static PlaceCard ToCard(CatalogEntry e, List<Review> reviews, VerdictOptions verdictOptions, (double Lat, double Lng)? from)
     {
         var score = ScoreCalculator.ForEntity(reviews);

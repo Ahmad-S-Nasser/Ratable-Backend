@@ -12,7 +12,7 @@ namespace Ratable.Modules.Identity.Endpoints;
 
 public sealed record OtpRequestBody(string? Phone);
 public sealed record OtpVerifyBody(string? Phone, string? Code, string? Client);
-public sealed record ProfileBody(string? DisplayName, string? AvatarUrl);
+public sealed record ProfileBody(string? DisplayName, string? AvatarUrl, List<string>? Interests = null, string? AreaId = null);
 public sealed record RolesBody(List<string>? Roles);
 public sealed record ErrorBody(string Error, int? RetryAfterSeconds = null);
 
@@ -113,10 +113,19 @@ public static class AuthEndpoints
         if (!string.IsNullOrEmpty(avatar) && (avatar.Length > 500 || !Uri.TryCreate(avatar, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps))
             return Results.BadRequest(new ErrorBody("invalid_avatar_url"));
 
+        // The onboarding choices: up to 12 interests (category ids) and one area id. They are labels chosen by the person, never a location.
+        var interests = body.Interests?.Select(i => i.Trim().ToLowerInvariant()).Where(i => i.Length > 0).Distinct().ToList();
+        if (interests is not null && (interests.Count > 12 || interests.Any(i => i.Length > 40 || !i.All(c => char.IsAsciiLetterOrDigit(c) || c == '-'))))
+            return Results.BadRequest(new ErrorBody("invalid_interests"));
+        var area = body.AreaId?.Trim().ToLowerInvariant();
+        if (!string.IsNullOrEmpty(area) && (area.Length > 40 || !area.All(c => char.IsAsciiLetterOrDigit(c) || c == '-'))) return Results.BadRequest(new ErrorBody("invalid_area"));
+
         var user = await users.GetAsync(UserId(principal), ct);
         if (user is null) return Results.Unauthorized();
         user.Profile.DisplayName = string.IsNullOrEmpty(name) ? null : name;
         user.Profile.AvatarUrl = string.IsNullOrEmpty(avatar) ? null : avatar;
+        if (interests is not null) user.Profile.Interests = interests;
+        if (body.AreaId is not null) user.Profile.AreaId = string.IsNullOrEmpty(area) ? null : area;
         await users.ReplaceAsync(user, ct);
         return Results.Ok(ToMe(user));
     }
@@ -136,5 +145,5 @@ public static class AuthEndpoints
     private static string UserId(ClaimsPrincipal p) => p.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
     private static MeResponse ToMe(User u) =>
-        new(u.Id, [.. u.Roles.Select(r => r.ToString())], new ProfileBody(u.Profile.DisplayName, u.Profile.AvatarUrl), u.PhoneVerified);
+        new(u.Id, [.. u.Roles.Select(r => r.ToString())], new ProfileBody(u.Profile.DisplayName, u.Profile.AvatarUrl, u.Profile.Interests, u.Profile.AreaId), u.PhoneVerified);
 }

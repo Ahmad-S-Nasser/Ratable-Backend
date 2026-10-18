@@ -35,6 +35,12 @@ public sealed class EntityCatalog(EntityRepository entities, CategoryRepository 
         return [.. found.Select(e => ToEntry(e))];
     }
 
+    public async Task<IReadOnlyList<CatalogEntry>> ListNearAsync(double latitude, double longitude, double radiusMeters, string? categoryId, int limit, CancellationToken ct = default)
+    {
+        var found = await entities.NearAsync(longitude, latitude, radiusMeters, limit, categoryId, ct);
+        return [.. found.Select(ToEntry)];
+    }
+
     public async Task<CategoryInfo?> GetCategoryAsync(string categoryId, CancellationToken ct = default)
     {
         var category = await categories.GetAsync(categoryId, ct);

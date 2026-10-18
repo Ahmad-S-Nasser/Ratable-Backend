@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Categories\*.json" />
+    <EmbeddedResource Include="Areas\*.json" />
   </ItemGroup>
 
 </Project>

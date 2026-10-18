@@ -39,6 +39,9 @@ public interface IEntityCatalog
     /// <summary>Public entities changed since a moment, for telling search engines which pages changed.</summary>
     Task<IReadOnlyList<CatalogEntry>> ListUpdatedSinceAsync(DateTime since, int limit, CancellationToken cancellationToken = default);
 
+    /// <summary>Public entities within a distance of a point, nearest first, for the nearby list. The point is used for this call only.</summary>
+    Task<IReadOnlyList<CatalogEntry>> ListNearAsync(double latitude, double longitude, double radiusMeters, string? categoryId, int limit, CancellationToken cancellationToken = default);
+
     /// <summary>The category's criteria, only if the category is active.</summary>
     Task<CategoryInfo?> GetCategoryAsync(string categoryId, CancellationToken cancellationToken = default);
 }

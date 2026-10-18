@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Ratable.Modules.Entities.Data;
 using Ratable.Modules.Entities.Services;
 using Ratable.Shared.Catalog;
+using Ratable.Shared.Location;
 using Ratable.Shared.Data;
 using Ratable.Shared.Moderation;
 
@@ -20,6 +21,10 @@ public static class EntitiesModule
         services.AddSingleton<EntityRepository>();
         services.AddIndexInitializer<EntitiesIndexInitializer>();
         services.AddSeeder<CategorySeeder>();
+        services.AddSingleton<AreaRepository>();
+        services.AddIndexInitializer<AreasIndexInitializer>();
+        services.AddSeeder<AreaSeeder>();
+        services.AddSingleton<ILocationProvider, SeededLocationProvider>();
 
         services.AddSingleton<DuplicateJudge>();
         services.AddSingleton<EntityService>();

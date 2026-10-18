@@ -39,11 +39,12 @@ public sealed class EntityRepository(IMongoDatabase database) : MongoRepository<
         Collection.CountDocumentsAsync(e => e.SubmittedByUserId == userId && e.CreatedAt >= since, cancellationToken: ct);
 
     /// <summary>Active entities within <paramref name="maxMeters"/> of a point, nearest first (the caller re-ranks by score).</summary>
-    public async Task<List<Entity>> NearAsync(double longitude, double latitude, double maxMeters, int limit = 50, CancellationToken ct = default)
+    public async Task<List<Entity>> NearAsync(double longitude, double latitude, double maxMeters, int limit = 50, string? categoryId = null, CancellationToken ct = default)
     {
         var point = GeoJson.Point(GeoJson.Geographic(longitude, latitude));
         var filter = Builders<Entity>.Filter.And(
             Builders<Entity>.Filter.Eq(e => e.Status, EntityStatus.Active),
+            categoryId is null ? Builders<Entity>.Filter.Empty : Builders<Entity>.Filter.Eq(e => e.CategoryId, categoryId),
             Builders<Entity>.Filter.Near(e => e.Location, point, maxDistance: maxMeters));
         return await Collection.Find(filter).Limit(limit).ToListAsync(ct);
     }
