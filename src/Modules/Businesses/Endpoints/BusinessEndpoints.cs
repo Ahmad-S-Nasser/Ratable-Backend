@@ -12,23 +12,28 @@ namespace Ratable.Modules.Businesses.Endpoints;
 public sealed record ErrorBody(string Error);
 public sealed record ReplyBody(string? Text);
 public sealed record ReasonBody(string? Reason);
+public sealed record CodeBody(string? Code);
 
 /// <summary>The claimant's view of their own claim.</summary>
-public sealed record OwnClaim(string Id, string EntityId, string Status, string Role, bool HasDocument, string? DocumentType, string? DecisionReason, DateTime CreatedAt);
+public sealed record OwnClaim(string Id, string EntityId, string Status, string Role, bool EmailVerified, bool HasDocument, string? DocumentType, string? DecisionReason, DateTime CreatedAt);
 
 /// <summary>A moderator's view of a claim waiting for a decision. Never holds the document, only that it exists.</summary>
 public sealed record ClaimForReview(
     string Id, string EntityId, string CompanyEmail, string EmailDomain, string Role, string? Website, string? Note, string? DocumentType, bool FreeEmail, bool DomainMatchesPlace, DateTime CreatedAt);
 
-public sealed record PlanDto(string Id, IReadOnlyList<string> Features, decimal? PriceEgpMonthly, bool ShowsContact);
+public sealed record PlanDto(string Id, IReadOnlyList<string> Features, IReadOnlyDictionary<string, decimal> MonthlyPrices, bool ShowsContact);
+
+public sealed record PlansResponse(List<PlanDto> Plans, IReadOnlyList<string> Currencies, int AnnualDiscountPercent);
 
 public static class BusinessEndpoints
 {
     public static IEndpointRouteBuilder MapBusinessEndpoints(this IEndpointRouteBuilder app)
     {
-        app.MapGet("/api/plans", Plans).WithTags("Businesses").Produces<List<PlanDto>>();
+        app.MapGet("/api/plans", Plans).WithTags("Businesses").Produces<PlansResponse>();
 
         app.MapPost("/api/entities/{entityId}/claims", CreateClaim).WithTags("Businesses").RequireAuthorization(PolicyNames.SignedIn).Produces<OwnClaim>(201).Produces<ErrorBody>(400).Produces<ErrorBody>(403).Produces<ErrorBody>(404).Produces<ErrorBody>(409).Produces<ErrorBody>(429);
+        app.MapPost("/api/me/claims/{id}/email/confirm", ConfirmEmail).WithTags("Businesses").RequireAuthorization(PolicyNames.SignedIn).Produces<OwnClaim>().Produces<ErrorBody>(400).Produces<ErrorBody>(404).Produces<ErrorBody>(409).Produces<ErrorBody>(429);
+        app.MapPost("/api/me/claims/{id}/email/resend", ResendEmail).WithTags("Businesses").RequireAuthorization(PolicyNames.SignedIn).Produces<OwnClaim>().Produces<ErrorBody>(404).Produces<ErrorBody>(409).Produces<ErrorBody>(429).Produces<ErrorBody>(503);
         app.MapPut("/api/me/claims/{id}/document", UploadDocument).WithTags("Businesses").RequireAuthorization(PolicyNames.SignedIn).Produces<OwnClaim>().Produces<ErrorBody>(400).Produces<ErrorBody>(404);
         app.MapGet("/api/me/claims", MyClaims).WithTags("Businesses").RequireAuthorization(PolicyNames.SignedIn).Produces<List<OwnClaim>>();
 
@@ -53,7 +58,7 @@ public static class BusinessEndpoints
 
     private static string UserId(ClaimsPrincipal p) => p.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
-    private static OwnClaim ToOwn(BusinessClaim c) => new(c.Id, c.EntityId, c.Status.ToString(), c.Role, c.DocumentUploadedAt is not null, c.DocumentType, c.DecisionReason, c.CreatedAt);
+    private static OwnClaim ToOwn(BusinessClaim c) => new(c.Id, c.EntityId, c.Status.ToString(), c.Role, c.EmailVerified, c.DocumentUploadedAt is not null, c.DocumentType, c.DecisionReason, c.CreatedAt);
 
     private static IResult Failed(ClaimFailure f) => f switch
     {
@@ -70,16 +75,33 @@ public static class BusinessEndpoints
         ClaimFailure.InvalidDocumentType => Results.BadRequest(new ErrorBody("invalid_document_type")),
         ClaimFailure.InvalidDocument or ClaimFailure.DocumentTooLarge => Results.BadRequest(new ErrorBody(f == ClaimFailure.DocumentTooLarge ? "document_too_large" : "invalid_document")),
         ClaimFailure.ReasonRequired => Results.BadRequest(new ErrorBody("reason_required")),
+        ClaimFailure.EmailNotVerified => Results.Json(new ErrorBody("email_not_verified"), statusCode: StatusCodes.Status403Forbidden),
+        ClaimFailure.InvalidCode => Results.BadRequest(new ErrorBody("invalid_code")),
+        ClaimFailure.CodeExpired => Results.BadRequest(new ErrorBody("code_expired")),
+        ClaimFailure.TooManyAttempts or ClaimFailure.TooSoon => Results.Json(new ErrorBody(f == ClaimFailure.TooSoon ? "too_soon" : "too_many_attempts"), statusCode: StatusCodes.Status429TooManyRequests),
+        ClaimFailure.EmailUnavailable => Results.Json(new ErrorBody("email_unavailable"), statusCode: StatusCodes.Status503ServiceUnavailable),
         _ => Results.NotFound(new ErrorBody("not_found")),
     };
 
     private static IResult Plans(IOptions<BusinessesOptions> options) =>
-        Results.Ok(options.Value.Plans.Select(p => new PlanDto(p.Id, p.Features, p.PriceEgpMonthly, p.ShowsContact)).ToList());
+        Results.Ok(new PlansResponse([.. options.Value.Plans.Select(p => new PlanDto(p.Id, p.Features, options.Value.PricesOf(p), p.ShowsContact))], options.Value.Currencies, options.Value.AnnualDiscountPercent));
 
     private static async Task<IResult> CreateClaim(string entityId, ClaimInput body, ClaimsPrincipal user, ClaimService service, CancellationToken ct)
     {
         var r = await service.CreateAsync(UserId(user), entityId, body, ct);
         return r.Ok ? Results.Created("/api/me/claims", ToOwn(r.Claim!)) : Failed(r.Failure);
+    }
+
+    private static async Task<IResult> ConfirmEmail(string id, CodeBody body, ClaimsPrincipal user, ClaimService service, CancellationToken ct)
+    {
+        var r = await service.ConfirmEmailAsync(UserId(user), id, body.Code, ct);
+        return r.Ok ? Results.Ok(ToOwn(r.Claim!)) : Failed(r.Failure);
+    }
+
+    private static async Task<IResult> ResendEmail(string id, ClaimsPrincipal user, ClaimService service, CancellationToken ct)
+    {
+        var r = await service.ResendCodeAsync(UserId(user), id, ct);
+        return r.Ok ? Results.Ok(ToOwn(r.Claim!)) : Failed(r.Failure);
     }
 
     private static async Task<IResult> UploadDocument(string id, string? type, HttpRequest request, ClaimsPrincipal user, ClaimService service, IOptions<BusinessesOptions> options, CancellationToken ct)
@@ -112,7 +134,7 @@ public static class BusinessEndpoints
         _ => Results.NotFound(new ErrorBody("not_found")),
     };
 
-    private static OwnerReplyDto ToDto(OwnerReply r) => new(r.Id, r.ReviewId, r.Text, r.CreatedAt, r.EditedAt);
+    private static OwnerReplyDto ToDto(OwnerReply r) => new(r.Id, r.ReviewId, r.Text, r.Status.ToString(), r.CreatedAt, r.EditedAt);
 
     private static async Task<IResult> CreateReply(string reviewId, ReplyBody body, ClaimsPrincipal user, OwnerReplyService service, CancellationToken ct) =>
         Replied(await service.CreateAsync(UserId(user), reviewId, body.Text, ct), created: true);
@@ -167,4 +189,4 @@ public static class BusinessEndpoints
     }
 }
 
-public sealed record OwnerReplyDto(string Id, string ReviewId, string Text, DateTime CreatedAt, DateTime? EditedAt);
+public sealed record OwnerReplyDto(string Id, string ReviewId, string Text, string Status, DateTime CreatedAt, DateTime? EditedAt);

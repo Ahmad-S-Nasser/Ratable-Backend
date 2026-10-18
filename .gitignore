@@ -480,3 +480,6 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# e2e and local runtime data
+src/Api/App_Data/e2e-*/

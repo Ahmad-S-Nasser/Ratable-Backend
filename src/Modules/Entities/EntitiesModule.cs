@@ -28,6 +28,14 @@ public static class EntitiesModule
 
         services.AddSingleton<DuplicateJudge>();
         services.AddSingleton<EntityService>();
+        services.AddSingleton<EntityActivityRepository>();
+        services.AddIndexInitializer<EntityActivityIndexInitializer>();
+        services.AddSingleton<ContactRateLimiter>();
+        services.AddSingleton<EntityContacts>();
+        services.AddSingleton<Ratable.Shared.Businesses.IEntityContacts>(sp => sp.GetRequiredService<EntityContacts>());
+        services.AddSingleton<Ratable.Shared.Businesses.IEntityActivity>(sp => sp.GetRequiredService<EntityContacts>());
+        services.AddSingleton<PublicEntityBuilder>();
+        services.AddSingleton<Import.SeedImporter>();
         services.AddSingleton<IEntityCatalog, EntityCatalog>();
         services.AddSingleton<IQueueCounter, EntityQueueCounter>();
         return services;

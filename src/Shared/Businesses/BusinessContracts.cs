@@ -41,5 +41,8 @@ public interface IBusinessReviewSource
     /// <summary>Published reviews, newest first.</summary>
     Task<IReadOnlyList<BusinessReviewItem>> ListAsync(string entityId, int limit, CancellationToken cancellationToken = default);
 
+    /// <summary>The verified overall score of each place (null when it has none), worked out exactly like the public score.</summary>
+    Task<IReadOnlyDictionary<string, double?>> GetScoresAsync(IReadOnlyCollection<string> entityIds, CancellationToken cancellationToken = default);
+
     Task<int> CountCreatedSinceAsync(string entityId, DateTime since, CancellationToken cancellationToken = default);
 }

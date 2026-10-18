@@ -7,7 +7,9 @@ using Ratable.Modules.Comments.Models;
 using Ratable.Modules.Comments.Services;
 using Ratable.Shared.Auth;
 using Ratable.Shared.Authors;
+using Ratable.Shared.Businesses;
 using Ratable.Shared.Content;
+using Ratable.Shared.Text;
 
 namespace Ratable.Modules.Comments.Endpoints;
 
@@ -68,7 +70,7 @@ public static class CommentEndpoints
     };
 
     private static async Task<IResult> List(
-        string reviewId, CommentRepository repository, IEnumerable<IContentDirectory> directories, IAuthorPresenter authors, CancellationToken ct)
+        string reviewId, CommentRepository repository, IEnumerable<IContentDirectory> directories, IAuthorPresenter authors, IEnumerable<IContactAccess> contactAccess, CancellationToken ct)
     {
         var review = await directories.First(d => d.Kind == ContentKind.Review).GetAsync(reviewId, ct);
         if (review is not { IsPublic: true }) return Results.NotFound();
@@ -76,8 +78,12 @@ public static class CommentEndpoints
         var published = await repository.ListPublishedAsync(review.Id, ct);
         var presented = await authors.PresentAsync([.. published.Select(c => new AuthorSlot(c.Id, c.UserId, c.IsAnonymous))], ct);
 
+        // On a locked profile a comment cannot carry a way to reach the place (rule 19).
+        var guard = contactAccess.FirstOrDefault();
+        var locked = guard is not null && review.EntityId is not null && review.CategoryId is not null && (await guard.LockedAmongAsync([(review.EntityId, review.CategoryId)], ct)).Contains(review.EntityId);
+
         PublicComment Map(Comment c, List<PublicComment> replies) =>
-            new(c.Id, presented[c.Id] is null, presented[c.Id], c.Text, c.CreatedAt, c.EditedAt is not null, c.EditedAt, replies);
+            new(c.Id, presented[c.Id] is null, presented[c.Id], locked ? ContactStripper.Strip(c.Text) : c.Text, c.CreatedAt, c.EditedAt is not null, c.EditedAt, replies);
 
         // A reply is shown only under a top-level comment that is itself public.
         var topLevel = published.Where(c => c.ParentId is null)

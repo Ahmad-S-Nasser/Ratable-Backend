@@ -6,6 +6,7 @@ using Ratable.Modules.Entities.Data;
 using Ratable.Modules.Entities.Models;
 using Ratable.Modules.Entities.Services;
 using Ratable.Shared.Auth;
+using Ratable.Shared.Businesses;
 using Ratable.Shared.Data;
 using Ratable.Shared.Merge;
 using Ratable.Shared.Text;
@@ -26,7 +27,11 @@ public sealed record PublicEntity(
     string Id, string CategoryId, LocalizedText Name, List<string> AlternateNames, Dictionary<string, string> Slugs,
     double? Longitude, double? Latitude, string? Address, string? City, string? Country,
     Dictionary<string, string> ExternalIds, List<string> SameAs, Dictionary<string, string> Fields,
-    LocalizedText? SummaryText, DateTime UpdatedAt);
+    LocalizedText? SummaryText, DateTime UpdatedAt,
+    bool ContactLocked = false, bool ContactAvailable = false, PublicContact? Contact = null);
+
+/// <summary>Contact details as shown to the public. Present only for places whose category does not gate contact, or through the Show contact call.</summary>
+public sealed record PublicContact(string? Phone, string? WhatsApp, List<string> Links);
 
 public sealed record QueueCandidate(string EntityId, LocalizedText Name, double NameScore, double? DistanceMeters, string Status);
 public sealed record QueueItem(
@@ -44,6 +49,8 @@ public static class EntityEndpoints
         entities.MapGet("/search", Search).Produces<List<PublicEntity>>().Produces<ErrorBody>(400);
         entities.MapGet("/{id}", Get).Produces<PublicEntity>().Produces(404).Produces(301);
         entities.MapPost("", Submit).RequireAuthorization(PolicyNames.SignedIn);
+        entities.MapPost("/{id}/contact/reveal", RevealContact).Produces<PublicContact>().Produces<ErrorBody>(403).Produces<ErrorBody>(404).Produces<ErrorBody>(429);
+        entities.MapPost("/{id}/views", CountView).Produces(204);
 
         var queue = app.MapGroup("/api/moderation/entities").WithTags("Moderation").RequireAuthorization(PolicyNames.Moderator);
         queue.MapGet("", ListQueue).Produces<List<QueueItem>>();
@@ -69,19 +76,60 @@ public static class EntityEndpoints
         };
     }
 
-    private static async Task<IResult> Get(string id, EntityService service, CancellationToken ct)
+    private static async Task<IResult> Get(string id, EntityService service, PublicEntityBuilder builder, CancellationToken ct)
     {
         var (entity, redirected) = await service.ResolveAsync(id, ct);
         if (entity is null) return Results.NotFound();
-        return redirected ? Results.Redirect($"/api/entities/{entity.Id}", permanent: true) : Results.Ok(ToPublic(entity));
+        return redirected ? Results.Redirect($"/api/entities/{entity.Id}", permanent: true) : Results.Ok(await builder.BuildOneAsync(entity, ct));
     }
 
-    private static async Task<IResult> Search(string? q, string? category, int? limit, EntityRepository repository, CancellationToken ct)
+    /// <summary>
+    /// Show contact: a separate, logged and rate-limited call. It answers only when the profile is not locked (its category does not gate contact, or the owner's plan includes
+    /// contact). Every successful call is counted for the owner's stats, with no record of who asked.
+    /// </summary>
+    private static async Task<IResult> RevealContact(
+        string id, HttpContext http, EntityService service, CategoryRepository categories, IEnumerable<IContactAccess> access, EntityContacts contacts,
+        EntityActivityRepository activity, ContactRateLimiter limiter, TimeProvider time, CancellationToken ct)
+    {
+        var (entity, redirected) = await service.ResolveAsync(id, ct);
+        if (entity is null || redirected || entity.Status != EntityStatus.Active) return Results.NotFound();
+
+        var ip = http.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        if (!limiter.TryAcquire($"reveal-ip:{ip}", 20, TimeSpan.FromHours(1)) || !limiter.TryAcquire($"reveal-entity:{entity.Id}", 300, TimeSpan.FromHours(1)))
+            return Results.Json(new ErrorBody("rate_limited"), statusCode: StatusCodes.Status429TooManyRequests);
+
+        var gated = (await categories.GetAsync(entity.CategoryId, ct))?.ContactGated ?? false;
+        if (gated)
+        {
+            var provider = access.FirstOrDefault();
+            if (provider is null || await provider.IsLockedAsync(entity.Id, entity.CategoryId, ct)) return Results.Json(new ErrorBody("contact_locked"), statusCode: StatusCodes.Status403Forbidden);
+        }
+
+        var details = await contacts.GetAsync(entity.Id, ct);
+        if (details is null || details.IsEmpty) return Results.NotFound(new ErrorBody("no_contact"));
+        await activity.AddTapAsync(entity.Id, time.GetUtcNow().UtcDateTime, ct);
+        return Results.Ok(new PublicContact(details.Phone, details.WhatsApp, [.. details.Links]));
+    }
+
+    /// <summary>Counts one page view for the owner's stats. A day-counter only; the same visitor counts once an hour; robots are ignored.</summary>
+    private static async Task<IResult> CountView(string id, HttpContext http, EntityRepository repository, EntityActivityRepository activity, ContactRateLimiter limiter, TimeProvider time, CancellationToken ct)
+    {
+        var agent = http.Request.Headers.UserAgent.ToString();
+        if (agent.Contains("bot", StringComparison.OrdinalIgnoreCase) || agent.Contains("crawl", StringComparison.OrdinalIgnoreCase) || agent.Contains("spider", StringComparison.OrdinalIgnoreCase))
+            return Results.NoContent();
+        var entity = await repository.GetAsync(id, ct);
+        if (entity is not { Status: EntityStatus.Active }) return Results.NoContent();
+        var ip = http.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        if (limiter.TryAcquire($"view:{ip}:{entity.Id}", 1, TimeSpan.FromHours(1))) await activity.AddViewAsync(entity.Id, time.GetUtcNow().UtcDateTime, ct);
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> Search(string? q, string? category, int? limit, EntityRepository repository, PublicEntityBuilder builder, CancellationToken ct)
     {
         var normalized = ArabicNormalizer.Normalize(q);
         if (normalized.Length == 0) return Results.BadRequest(new ErrorBody("query_required"));
         var found = await repository.SearchTextAsync(normalized, category, Math.Clamp(limit ?? 20, 1, 50), ct);
-        return Results.Ok(found.Select(ToPublic));
+        return Results.Ok(await builder.BuildAsync(found, ct));
     }
 
     private static async Task<IResult> ListQueue(EntityRepository repository, CancellationToken ct)
@@ -110,11 +158,6 @@ public static class EntityEndpoints
         ActionOutcome.Conflict => Results.Conflict(new { error = "merge_conflict", conflicts = r.Conflicts!.Select(c => new ConflictDto(c.Module, c.Code, c.Count)) }),
         _ => Results.BadRequest(new ErrorBody("invalid_request")),
     };
-
-    private static PublicEntity ToPublic(Entity e) => new(
-        e.Id, e.CategoryId, e.Name, e.AlternateNames, e.Slugs,
-        e.Location?.Coordinates.Longitude, e.Location?.Coordinates.Latitude, e.Address, e.City, e.Country,
-        e.ExternalIds, e.SameAs, e.Fields, e.Summary?.Text, e.UpdatedAt);
 
     private static QueueItem ToQueueItem(Entity e)
     {

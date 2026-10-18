@@ -8,10 +8,10 @@ namespace Ratable.Api.Tests.Data;
 public sealed class CategorySeedFileTests
 {
     private static readonly string[] Expected =
-        ["appliances", "cars", "compounds", "hotels-resorts", "restaurants-cafes", "schools-nurseries"];
+        ["appliances", "cars", "compounds", "hotels-resorts", "restaurants-cafes", "schools-nurseries", "service-providers"];
 
     [Fact]
-    public void The_six_launch_categories_are_embedded()
+    public void The_seven_launch_categories_are_embedded()
     {
         Assert.Equal(Expected, CategorySeeder.LoadEmbedded().Select(c => c.Id).Order());
     }
@@ -53,13 +53,14 @@ public sealed class CategorySeedFileTests
     }
 
     [Fact]
-    public void Every_seed_file_sets_contact_gated_and_rates_individuals_to_false()
+    public void Contact_gating_is_off_in_every_seed_file_except_service_providers()
     {
         var categories = CategorySeeder.LoadEmbedded().ToList();
         Assert.All(categories, c =>
         {
-            Assert.False(c.ContactGated, c.Id);
-            Assert.False(c.RatesIndividuals, c.Id);
+            var providers = c.Id == "service-providers";
+            Assert.Equal(providers, c.ContactGated);
+            Assert.Equal(providers, c.RatesIndividuals);
         });
 
         // The flags must be written in the files themselves, not only be the C# defaults.
@@ -68,8 +69,9 @@ public sealed class CategorySeedFileTests
         {
             using var reader = new StreamReader(assembly.GetManifestResourceStream(name)!);
             var json = reader.ReadToEnd();
-            Assert.Contains("\"contactGated\": false", json);
-            Assert.Contains("\"ratesIndividuals\": false", json);
+            var providers = name.Contains("service-providers");
+            Assert.Contains($"\"contactGated\": {(providers ? "true" : "false")}", json);
+            Assert.Contains($"\"ratesIndividuals\": {(providers ? "true" : "false")}", json);
         }
     }
 
@@ -86,13 +88,13 @@ public sealed class CategorySeederTests(MongoFixture fixture)
     private CategorySeeder Seeder(CategoryRepository repo) => new(repo, NullLogger<CategorySeeder>.Instance);
 
     [MongoFact]
-    public async Task Seeding_inserts_the_six_categories_and_is_repeatable()
+    public async Task Seeding_inserts_the_seven_categories_and_is_repeatable()
     {
         var repo = new CategoryRepository(fixture.Database);
         await Seeder(repo).SeedAsync(dryRun: false);
         await Seeder(repo).SeedAsync(dryRun: false);
 
-        Assert.Equal(6, (await repo.ListActiveAsync()).Count);
+        Assert.Equal(7, (await repo.ListActiveAsync()).Count);
     }
 
     [MongoFact]

@@ -28,6 +28,7 @@ public static class IdentityModule
         services.AddSingleton<IPublicProfiles>(sp => sp.GetRequiredService<IdentityDirectory>());
         services.AddSingleton<IAccountDirectory>(sp => sp.GetRequiredService<IdentityDirectory>());
         services.AddSingleton<IAccountSignals, AccountSignalsService>();
+        services.AddSingleton<Ratable.Shared.Businesses.IAccountPhones, AccountPhones>();
         services.AddSingleton<Ratable.Shared.Businesses.IBusinessRoleGranter, BusinessRoleGranter>();
         services.AddSingleton<OtpService>();
 

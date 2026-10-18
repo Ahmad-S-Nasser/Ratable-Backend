@@ -234,11 +234,11 @@ public sealed class EntityService(
     public static IEnumerable<string> AllNames(Entity e) =>
         new[] { e.Name.Ar, e.Name.En }.Concat(e.AlternateNames).Where(n => !string.IsNullOrWhiteSpace(n));
 
-    private static string Clean(string? s) => (s ?? "").Trim();
+    internal static string Clean(string? s) => (s ?? "").Trim();
 
-    private static string? Limit(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
+    internal static string? Limit(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
 
-    private string? ValidateFields(Category category, Dictionary<string, string>? input, out Dictionary<string, string> accepted)
+    internal string? ValidateFields(Category category, Dictionary<string, string>? input, out Dictionary<string, string> accepted)
     {
         accepted = [];
         foreach (var (key, raw) in input ?? [])

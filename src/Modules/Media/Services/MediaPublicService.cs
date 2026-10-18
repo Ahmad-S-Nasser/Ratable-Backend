@@ -19,7 +19,7 @@ public sealed record FeedItem(PublicMediaItem Media, string ReviewId, string Ent
 /// What the public may see of media, and the one place that decides it: an item is visible only when it is approved, its review is public, and
 /// (for an anonymous review) a video was protected for an anonymous author. Files are streamed from private storage and nothing else is reachable.
 /// </summary>
-public sealed partial class MediaPublicService(MediaRepository items, IMediaStorage storage, IEnumerable<IContentDirectory> directories, IEntityCatalog catalog) : IReviewMedia
+public sealed partial class MediaPublicService(MediaRepository items, IMediaStorage storage, IEnumerable<IContentDirectory> directories, IEntityCatalog catalog, IEnumerable<Ratable.Shared.Businesses.IContactAccess> contactAccess) : IReviewMedia
 {
     private IContentDirectory ReviewDirectory => directories.First(d => d.Kind == ContentKind.Review);
 
@@ -96,11 +96,15 @@ public sealed partial class MediaPublicService(MediaRepository items, IMediaStor
                 if (review is { IsPublic: true, IsDeleted: false, EntityId: not null } && Visible(m, review.IsAnonymous)) contexts.Add((m, review));
             }
             var entries = (await catalog.GetActiveEntriesAsync([.. contexts.Select(c => c.Review.EntityId!).Distinct()], ct)).ToDictionary(e => e.Id);
+            var guard = contactAccess.FirstOrDefault();
+            var locked = guard is null ? new HashSet<string>() : (await guard.LockedAmongAsync([.. entries.Values.Select(e => (e.Id, e.CategoryId))], ct)).ToHashSet();
             foreach (var (item, review) in contexts)
             {
                 if (result.Count >= limit) break;
                 if (!entries.TryGetValue(review.EntityId!, out var e)) continue;
-                result.Add(new FeedItem(ToPublic(item), item.ReviewId, e.Id, e.CategoryId, e.Name, new Dictionary<string, string>(e.Slugs), e.City));
+                var shown = ToPublic(item);
+                if (locked.Contains(e.Id) && shown.Captions is not null) shown = shown with { Captions = new Ratable.Shared.Data.LocalizedText(Ratable.Shared.Text.ContactStripper.Strip(shown.Captions.Ar), Ratable.Shared.Text.ContactStripper.Strip(shown.Captions.En)) };
+                result.Add(new FeedItem(shown, item.ReviewId, e.Id, e.CategoryId, e.Name, new Dictionary<string, string>(e.Slugs), e.City));
             }
         }
         return result;

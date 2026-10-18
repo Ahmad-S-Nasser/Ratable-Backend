@@ -29,8 +29,12 @@ public sealed class ReplyAndDashboardTests
         return new World(api, owner, reader, other, entity.Id, review);
     }
 
-    private static Task<(HttpResponseMessage Response, JsonElement Json)> Reply(World w, string? cookie, string? text = "Thank you, we are adding parking spaces") =>
-        Send(w.Api, HttpMethod.Post, $"/api/reviews/{w.ReviewId}/owner-reply", cookie, new { text });
+    /// <summary>Posts a reply. The fake AI says the text is clean unless a test queues another answer first.</summary>
+    private static Task<(HttpResponseMessage Response, JsonElement Json)> Reply(World w, string? cookie, string? text = "Thank you, we are adding parking spaces")
+    {
+        w.Api.Ai.Enqueue(Clean());
+        return Send(w.Api, HttpMethod.Post, $"/api/reviews/{w.ReviewId}/owner-reply", cookie, new { text });
+    }
 
     // ---- replies ----
 
@@ -56,12 +60,54 @@ public sealed class ReplyAndDashboardTests
     }
 
     [MongoFact]
+    public async Task A_flagged_reply_waits_for_a_moderator_and_stays_out_of_sight_until_it_is_published()
+    {
+        var w = await Setup();
+        await using var _ = w.Api;
+        var admin = await w.Api.SignInAsync(AdminPhone);
+        w.Api.Ai.Enqueue(Flagged(abuse: 0.95));
+        var (created, body) = await Send(w.Api, HttpMethod.Post, $"/api/reviews/{w.ReviewId}/owner-reply", w.Owner.Cookie, new { text = "That reviewer is a liar and we know who he is" });
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        Assert.Equal("PendingModeration", body.GetProperty("status").GetString());
+
+        var open = (await Send(w.Api, HttpMethod.Get, "/api/moderation/cases?kind=ownerreply", admin.Cookie)).Json;
+        Assert.Equal(1, open.GetProperty("total").GetInt32());
+        Assert.False((await Send(w.Api, HttpMethod.Get, $"/api/entities/{w.EntityId}/reviews")).Json[0].TryGetProperty("ownerReply", out var hidden) && hidden.ValueKind != JsonValueKind.Null);
+        var (_, dash) = await Send(w.Api, HttpMethod.Get, $"/api/business/places/{w.EntityId}/dashboard", w.Owner.Cookie);
+        Assert.Equal(1, dash.GetProperty("repliesInModeration").GetInt32());
+
+        var caseId = open.GetProperty("items")[0].GetProperty("id").GetString();
+        Assert.Equal(HttpStatusCode.OK, (await Send(w.Api, HttpMethod.Post, $"/api/moderation/cases/{caseId}/hide", admin.Cookie, new { reason = "Threatens the reviewer" })).Response.StatusCode);
+        Assert.False((await Send(w.Api, HttpMethod.Get, $"/api/entities/{w.EntityId}/reviews")).Json[0].TryGetProperty("ownerReply", out var still) && still.ValueKind != JsonValueKind.Null);
+        // A hidden reply no longer counts as an answer, so the review waits for a new one.
+        Assert.Equal(1, (await Send(w.Api, HttpMethod.Get, $"/api/business/places/{w.EntityId}/dashboard", w.Owner.Cookie)).Json.GetProperty("awaitingReply").GetArrayLength());
+    }
+
+    [MongoFact]
+    public async Task An_edit_goes_back_to_moderation_and_the_old_text_is_not_shown_meanwhile()
+    {
+        var w = await Setup();
+        await using var _ = w.Api;
+        await Reply(w, w.Owner.Cookie);
+        Assert.Equal("Thank you, we are adding parking spaces", (await Send(w.Api, HttpMethod.Get, $"/api/entities/{w.EntityId}/reviews")).Json[0].GetProperty("ownerReply").GetProperty("text").GetString());
+
+        w.Api.Ai.Enqueue(Flagged(spam: 0.9));
+        var (edited, body) = await Send(w.Api, HttpMethod.Put, $"/api/reviews/{w.ReviewId}/owner-reply", w.Owner.Cookie, new { text = "Call 0100 000 0000 for a discount" });
+        Assert.Equal(HttpStatusCode.OK, edited.StatusCode);
+        Assert.Equal("PendingModeration", body.GetProperty("status").GetString());
+        var shown = (await Send(w.Api, HttpMethod.Get, $"/api/entities/{w.EntityId}/reviews")).Json[0];
+        Assert.False(shown.TryGetProperty("ownerReply", out var r) && r.ValueKind != JsonValueKind.Null);
+        Assert.DoesNotContain("0100", shown.GetRawText());
+    }
+
+    [MongoFact]
     public async Task The_owner_can_edit_and_remove_a_reply_and_write_a_new_one()
     {
         var w = await Setup();
         await using var _ = w.Api;
         await Reply(w, w.Owner.Cookie);
 
+        w.Api.Ai.Enqueue(Clean());
         var (edited, json) = await Send(w.Api, HttpMethod.Put, $"/api/reviews/{w.ReviewId}/owner-reply", w.Owner.Cookie, new { text = "Parking is fixed now" });
         Assert.Equal(HttpStatusCode.OK, edited.StatusCode);
         Assert.NotEqual(JsonValueKind.Null, json.GetProperty("editedAt").ValueKind);

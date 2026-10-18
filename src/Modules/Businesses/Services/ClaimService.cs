@@ -15,6 +15,7 @@ public enum ClaimFailure
 {
     None, NotFound, PhoneNotVerified, EntityNotFound, AlreadyOwned, AlreadyOwnerHere, ClaimOpen, TooManyClaims, InvalidEmail, InvalidRole, InvalidDocumentType,
     InvalidDocument, DocumentTooLarge, WrongState, ReasonRequired, DocumentMissing, OwnerConflict,
+    EmailNotVerified, InvalidCode, CodeExpired, TooManyAttempts, EmailUnavailable, TooSoon,
 }
 
 public sealed record ClaimInput(string? CompanyEmail, string? Role, string? Website, string? Note);
@@ -36,6 +37,7 @@ public sealed class ClaimService(
     IAccountSignals accounts,
     IBusinessRoleGranter roles,
     IPrivateFileStore files,
+    IEmailSender email,
     IAuditLog audit,
     IOptions<BusinessesOptions> options,
     TimeProvider time)
@@ -44,6 +46,11 @@ public sealed class ClaimService(
     private static readonly HashSet<string> DocumentTypes = ["commercial_register", "tax_card", "license", "other"];
 
     private BusinessesOptions Opt => options.Value;
+
+    private const int MaxCodeAttempts = 5;
+    private const int MaxCodeSends = 5;
+    private static readonly TimeSpan CodeLife = TimeSpan.FromMinutes(10);
+    private static readonly TimeSpan ResendGap = TimeSpan.FromSeconds(60);
 
     public async Task<ClaimResult> CreateAsync(string userId, string entityId, ClaimInput input, CancellationToken ct = default)
     {
@@ -81,7 +88,72 @@ public sealed class ClaimService(
             Status = ClaimStatus.Draft,
             CreatedAt = now,
         };
+        // The code goes out before anything is stored, so a failed send leaves no half-made claim behind.
+        if (await SendCodeAsync(claim, now, ct) is { } failed) return new(failed);
         await claims.InsertAsync(claim, ct);
+        return new(ClaimFailure.None, claim);
+    }
+
+    /// <summary>Sends a new one-time code to the company email: single use, valid 10 minutes, kept only as a hash.</summary>
+    private async Task<ClaimFailure?> SendCodeAsync(BusinessClaim claim, DateTime now, CancellationToken ct)
+    {
+        var code = RandomNumberGenerator.GetInt32(0, 1_000_000).ToString("D6");
+        try
+        {
+            await email.SendAsync(claim.CompanyEmail, "Ratable: confirm your company email",
+                $"Your Ratable code is {code}. It works once and expires in 10 minutes. If you did not ask for it, ignore this message.", ct);
+        }
+        catch (EmailUnavailableException)
+        {
+            return ClaimFailure.EmailUnavailable;
+        }
+        claim.EmailCodeHash = HashCode(claim.Id, code);
+        claim.EmailCodeExpiresAt = now + CodeLife;
+        claim.EmailAttempts = 0;
+        claim.EmailSends++;
+        claim.EmailLastSentAt = now;
+        return null;
+    }
+
+    private static string HashCode(string claimId, string code) => Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes($"{claimId}:{code}")));
+
+    public async Task<ClaimResult> ResendCodeAsync(string userId, string claimId, CancellationToken ct = default)
+    {
+        var claim = await claims.GetAsync(claimId, ct);
+        if (claim is null || claim.UserId != userId) return new(ClaimFailure.NotFound);
+        if (claim.Status != ClaimStatus.Draft || claim.EmailVerified) return new(ClaimFailure.WrongState);
+        var now = time.GetUtcNow().UtcDateTime;
+        if (claim.EmailSends >= MaxCodeSends) return new(ClaimFailure.TooManyClaims);
+        if (claim.EmailLastSentAt is { } last && now - last < ResendGap) return new(ClaimFailure.TooSoon);
+        if (await SendCodeAsync(claim, now, ct) is { } failed) return new(failed);
+        await claims.ReplaceAsync(claim, ct);
+        return new(ClaimFailure.None, claim);
+    }
+
+    /// <summary>Checks the code the claimant typed. Single use, 10 minutes, five wrong tries and the code is dead.</summary>
+    public async Task<ClaimResult> ConfirmEmailAsync(string userId, string claimId, string? code, CancellationToken ct = default)
+    {
+        var claim = await claims.GetAsync(claimId, ct);
+        if (claim is null || claim.UserId != userId) return new(ClaimFailure.NotFound);
+        if (claim.Status != ClaimStatus.Draft) return new(ClaimFailure.WrongState);
+        if (claim.EmailVerified) return new(ClaimFailure.None, claim);
+        var now = time.GetUtcNow().UtcDateTime;
+        if (claim.EmailCodeHash is null || claim.EmailCodeExpiresAt is null || claim.EmailCodeExpiresAt < now) return new(ClaimFailure.CodeExpired);
+        if (claim.EmailAttempts >= MaxCodeAttempts) return new(ClaimFailure.TooManyAttempts);
+
+        var typed = new string((code ?? "").Where(char.IsDigit).ToArray());
+        claim.EmailAttempts++;
+        var match = typed.Length == 6 && CryptographicOperations.FixedTimeEquals(
+            System.Text.Encoding.ASCII.GetBytes(HashCode(claim.Id, typed)), System.Text.Encoding.ASCII.GetBytes(claim.EmailCodeHash));
+        if (!match)
+        {
+            await claims.ReplaceAsync(claim, ct);
+            return new(ClaimFailure.InvalidCode);
+        }
+        claim.EmailVerified = true;
+        claim.EmailCodeHash = null;
+        claim.EmailCodeExpiresAt = null;
+        await claims.ReplaceAsync(claim, ct);
         return new(ClaimFailure.None, claim);
     }
 
@@ -91,6 +163,7 @@ public sealed class ClaimService(
         var claim = await claims.GetAsync(claimId, ct);
         if (claim is null || claim.UserId != userId) return new(ClaimFailure.NotFound);
         if (claim.Status is not (ClaimStatus.Draft or ClaimStatus.Pending)) return new(ClaimFailure.WrongState);
+        if (!claim.EmailVerified) return new(ClaimFailure.EmailNotVerified);
         var type = (documentType ?? "").Trim().ToLowerInvariant();
         if (!DocumentTypes.Contains(type)) return new(ClaimFailure.InvalidDocumentType);
         if (content.Length == 0) return new(ClaimFailure.InvalidDocument);

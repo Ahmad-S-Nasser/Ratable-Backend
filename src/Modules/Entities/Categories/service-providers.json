@@ -1,0 +1,87 @@
+{
+  "_id": "service-providers",
+  "name": {
+    "ar": "مقدمو الخدمات",
+    "en": "Service providers"
+  },
+  "icon": "wrench",
+  "schemaOrgType": "LocalBusiness",
+  "criteria": [
+    {
+      "id": "quality",
+      "label": {
+        "ar": "جودة الشغل",
+        "en": "Quality of work"
+      },
+      "answerType": "Rating5",
+      "options": []
+    },
+    {
+      "id": "punctuality",
+      "label": {
+        "ar": "الالتزام بالمواعيد",
+        "en": "Punctuality"
+      },
+      "answerType": "Rating5",
+      "options": []
+    },
+    {
+      "id": "price_fairness",
+      "label": {
+        "ar": "عدالة السعر",
+        "en": "Fair price"
+      },
+      "answerType": "Rating5",
+      "options": []
+    },
+    {
+      "id": "communication",
+      "label": {
+        "ar": "التواصل",
+        "en": "Communication"
+      },
+      "answerType": "Rating5",
+      "options": []
+    },
+    {
+      "id": "cleanliness",
+      "label": {
+        "ar": "النظافة بعد الشغل",
+        "en": "Tidiness after the job"
+      },
+      "answerType": "Rating5",
+      "options": []
+    }
+  ],
+  "acceptedProofTypes": [
+    "invoice",
+    "booking_confirmation",
+    "photo_of_work"
+  ],
+  "anonymousByDefault": false,
+  "entityFields": [
+    {
+      "key": "trade",
+      "label": {
+        "ar": "المهنة",
+        "en": "Trade"
+      },
+      "type": "text",
+      "options": []
+    },
+    {
+      "key": "serviceArea",
+      "label": {
+        "ar": "منطقة الخدمة",
+        "en": "Service area"
+      },
+      "type": "text",
+      "options": []
+    }
+  ],
+  "verdictEnabled": true,
+  "collectionsEnabled": false,
+  "active": true,
+  "contactGated": true,
+  "ratesIndividuals": true
+}

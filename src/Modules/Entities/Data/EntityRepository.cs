@@ -19,6 +19,9 @@ public sealed class EntityRepository(IMongoDatabase database) : MongoRepository<
         return Collection.ReplaceOneAsync(e => e.Id == entity.Id, entity, cancellationToken: ct);
     }
 
+    public async Task<Entity?> GetByGooglePlaceIdAsync(string placeId, CancellationToken ct = default) =>
+        await Collection.Find(e => e.GooglePlaceId == placeId).FirstOrDefaultAsync(ct);
+
     public async Task<List<Entity>> ListByCategoryAsync(string categoryId, int limit = 50, CancellationToken ct = default) =>
         await Collection.Find(e => e.CategoryId == categoryId && e.Status == EntityStatus.Active).Limit(limit).ToListAsync(ct);
 

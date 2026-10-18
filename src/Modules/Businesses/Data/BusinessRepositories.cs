@@ -67,6 +67,8 @@ public sealed class OwnershipRepository(IMongoDatabase database) : MongoReposito
     public Task DeleteForEntityAsync(string entityId, CancellationToken ct = default) => Collection.DeleteOneAsync(o => o.EntityId == entityId, ct);
 }
 
+public sealed record PendingReply(string Id, int Revision);
+
 public sealed class OwnerReplyRepository(IMongoDatabase database) : MongoRepository<OwnerReply>(database, Collections.OwnerReplies)
 {
     public async Task<bool> TryInsertAsync(OwnerReply reply, CancellationToken ct = default)
@@ -85,13 +87,22 @@ public sealed class OwnerReplyRepository(IMongoDatabase database) : MongoReposit
     public async Task<OwnerReply?> GetForReviewAsync(string reviewId, CancellationToken ct = default) =>
         ObjectId.TryParse(reviewId, out _) ? await Collection.Find(r => r.ReviewId == reviewId).FirstOrDefaultAsync(ct) : null;
 
+    public async Task<OwnerReply?> GetAsync(string id, CancellationToken ct = default) =>
+        ObjectId.TryParse(id, out _) ? await Collection.Find(r => r.Id == id).FirstOrDefaultAsync(ct) : null;
+
+    public async Task<List<PendingReply>> ListPendingAsync(int limit, CancellationToken ct = default) =>
+        [.. (await Collection.Find(r => r.Status == ReplyStatus.PendingModeration && !r.Deleted).SortBy(r => r.CreatedAt).Limit(limit).Project(r => new { r.Id, r.Revision }).ToListAsync(ct)).Select(x => new PendingReply(x.Id, x.Revision))];
+
+    public Task<long> CountPendingForEntityAsync(string entityId, CancellationToken ct = default) =>
+        Collection.CountDocumentsAsync(r => r.EntityId == entityId && !r.Deleted && r.Status == ReplyStatus.PendingModeration, cancellationToken: ct);
+
     public Task ReplaceAsync(OwnerReply reply, CancellationToken ct = default) => Collection.ReplaceOneAsync(r => r.Id == reply.Id, reply, cancellationToken: ct);
 
     public async Task<List<OwnerReply>> ListVisibleForReviewsAsync(IReadOnlyCollection<string> reviewIds, CancellationToken ct = default) =>
-        reviewIds.Count == 0 ? [] : await Collection.Find(r => reviewIds.Contains(r.ReviewId) && !r.Deleted).ToListAsync(ct);
+        reviewIds.Count == 0 ? [] : await Collection.Find(r => reviewIds.Contains(r.ReviewId) && !r.Deleted && r.Status == ReplyStatus.Published).ToListAsync(ct);
 
     public async Task<HashSet<string>> ListRepliedReviewIdsAsync(string entityId, CancellationToken ct = default) =>
-        [.. await Collection.Find(r => r.EntityId == entityId && !r.Deleted).Project(r => r.ReviewId).ToListAsync(ct)];
+        [.. await Collection.Find(r => r.EntityId == entityId && !r.Deleted && r.Status != ReplyStatus.Hidden).Project(r => r.ReviewId).ToListAsync(ct)];
 }
 
 public sealed class BusinessesIndexInitializer : IIndexInitializer

@@ -29,4 +29,8 @@ public static class Collections
     public const string BusinessClaims = "business_claims";
     public const string BusinessOwnerships = "business_ownerships";
     public const string OwnerReplies = "owner_replies";
+    public const string EntityDailyStats = "entity_daily_stats";
+    public const string BusinessSubscriptions = "business_subscriptions";
+    public const string ContactRequests = "contact_requests";
+    public const string BusinessNudges = "business_nudges";
 }

@@ -47,6 +47,12 @@ public sealed class BusinessReviewSource(ReviewRepository reviews, IAuthorPresen
             presented[r.Id] is null, presented[r.Id], r.UnderReview))];
     }
 
+    public async Task<IReadOnlyDictionary<string, double?>> GetScoresAsync(IReadOnlyCollection<string> entityIds, CancellationToken ct = default)
+    {
+        var byPlace = (await reviews.ListScoringForEntitiesAsync(entityIds, ct)).GroupBy(r => r.EntityId).ToDictionary(g => g.Key, g => ScoreCalculator.ForEntity(g).Overall);
+        return entityIds.ToDictionary(id => id, id => byPlace.GetValueOrDefault(id));
+    }
+
     public async Task<int> CountCreatedSinceAsync(string entityId, DateTime since, CancellationToken ct = default) =>
         (int)await reviews.CountPublishedSinceAsync(entityId, since, ct);
 }

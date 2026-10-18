@@ -14,6 +14,7 @@ using Ratable.Shared.Data;
 using Ratable.Modules.Reviews.Votes;
 using Ratable.Shared.Media;
 using Ratable.Shared.Businesses;
+using Ratable.Shared.Text;
 
 namespace Ratable.Modules.Reviews.Endpoints;
 
@@ -144,11 +145,11 @@ public static class ReviewEndpoints
     };
 
     private static async Task<IResult> List(
-        string entityId, int? limit, int? skip, string? sort, bool? verified, ReviewRepository repository, IEntityCatalog catalog, IAuthorPresenter authors, IEnumerable<IReviewMedia> media, ReviewVoteRepository votes, IEnumerable<IOwnerReplyDirectory> ownerReplies, CancellationToken ct)
+        string entityId, int? limit, int? skip, string? sort, bool? verified, ReviewRepository repository, IEntityCatalog catalog, IAuthorPresenter authors, IEnumerable<IReviewMedia> media, ReviewVoteRepository votes, IEnumerable<IOwnerReplyDirectory> ownerReplies, IEnumerable<IContactAccess> contactAccess, CancellationToken ct)
     {
         if (await catalog.GetActiveEntityAsync(entityId, ct) is null) return Results.NotFound();
         var found = await repository.ListPublishedAsync(entityId, Math.Clamp(limit ?? 20, 1, 50), Math.Max(0, skip ?? 0), sort, verified == true, ct);
-        return Results.Ok(await ToPublic(found, authors, media, votes, ownerReplies, ct));
+        return Results.Ok(await ToPublic(found, authors, media, votes, ownerReplies, contactAccess, ct));
     }
 
     private static async Task<IResult> Score(string entityId, ReviewRepository repository, IEntityCatalog catalog, IOptions<VerdictOptions> verdictOptions, CancellationToken ct)
@@ -166,12 +167,12 @@ public static class ReviewEndpoints
 
     /// <summary>The public history: the current version and the earlier versions that were public when they were replaced.</summary>
     private static async Task<IResult> History(
-        string id, ReviewRepository repository, ReviewRevisionRepository revisions, IAuthorPresenter authors, IEnumerable<IReviewMedia> media, ReviewVoteRepository votes, IEnumerable<IOwnerReplyDirectory> ownerReplies, CancellationToken ct)
+        string id, ReviewRepository repository, ReviewRevisionRepository revisions, IAuthorPresenter authors, IEnumerable<IReviewMedia> media, ReviewVoteRepository votes, IEnumerable<IOwnerReplyDirectory> ownerReplies, IEnumerable<IContactAccess> contactAccess, CancellationToken ct)
     {
         var review = await repository.GetAsync(id, ct);
         if (review is not { Status: ReviewStatus.Published }) return Results.NotFound();
         var earlier = (await revisions.ListAsync(review.Id, ct)).Where(r => r.StatusWhenSuperseded == ReviewStatus.Published);
-        var current = (await ToPublic([review], authors, media, votes, ownerReplies, ct)).Single();
+        var current = (await ToPublic([review], authors, media, votes, ownerReplies, contactAccess, ct)).Single();
         return Results.Ok(new ReviewHistory(current,
             [.. earlier.Select(r => new PublicRevision(r.RevisionNumber, ToAnswers(r.Answers), ScoreCalculator.ReviewOverall(r.Answers), r.Text, r.Language, r.ChangedAt, r.SupersededAt))]));
     }
@@ -182,7 +183,7 @@ public static class ReviewEndpoints
     private static List<AnswerDto> ToAnswers(IEnumerable<ReviewAnswer> answers) => [.. answers.Select(a => new AnswerDto(a.CriterionId, a.Score, a.OptionValue))];
 
     /// <summary>The one place a review becomes a public response. The author comes from the presenter and nowhere else.</summary>
-    private static async Task<List<PublicReview>> ToPublic(IReadOnlyCollection<Review> reviews, IAuthorPresenter authors, IEnumerable<IReviewMedia> media, ReviewVoteRepository votes, IEnumerable<IOwnerReplyDirectory> ownerReplies, CancellationToken ct)
+    private static async Task<List<PublicReview>> ToPublic(IReadOnlyCollection<Review> reviews, IAuthorPresenter authors, IEnumerable<IReviewMedia> media, ReviewVoteRepository votes, IEnumerable<IOwnerReplyDirectory> ownerReplies, IEnumerable<IContactAccess> contactAccess, CancellationToken ct)
     {
         var helpful = await votes.CountsAsync([.. reviews.Select(r => r.Id)], ct);
         var presented = await authors.PresentAsync([.. reviews.Select(r => new AuthorSlot(r.Id, r.UserId, r.IsAnonymous))], ct);
@@ -193,10 +194,21 @@ public static class ReviewEndpoints
         var replies = new Dictionary<string, OwnerReplyInfo>();
         foreach (var directory in ownerReplies)
             foreach (var (reviewId, reply) in await directory.GetAsync([.. reviews.Select(r => r.Id)], ct)) replies[reviewId] = reply;
-        return [.. reviews.Select(r => new PublicReview(
+        // On a locked profile (rule 19) nobody may leave a way to reach the place in the text, a caption or a reply: it is removed when the response is built.
+        var lockedIds = new HashSet<string>();
+        var guard = contactAccess.FirstOrDefault();
+        if (guard is not null) lockedIds = [.. await guard.LockedAmongAsync([.. reviews.Select(r => (r.EntityId, r.CategoryId)).Distinct()], ct)];
+        PublicMediaItem CleanMedia(PublicMediaItem m) => m.Captions is null ? m : m with { Captions = new LocalizedText(ContactStripper.Strip(m.Captions.Ar), ContactStripper.Strip(m.Captions.En)) };
+        return [.. reviews.Select(r => Build(r, lockedIds.Contains(r.EntityId)))];
+
+        PublicReview Build(Review r, bool locked)
+        {
+            var p = new PublicReview(
             r.Id, presented[r.Id] is null, presented[r.Id], ToAnswers(r.Answers), ScoreCalculator.ReviewOverall(r.Answers), r.Text, r.Language,
             r.Verification.Level == VerificationLevel.Verified, r.CreatedAt, r.RevisionNumber > 1 ? r.UpdatedAt : null, r.RevisionNumber, r.UnderReview,
-            files.TryGetValue(r.Id, out var m) ? [.. m] : [], helpful.GetValueOrDefault(r.Id), replies.GetValueOrDefault(r.Id)))];
+            files.TryGetValue(r.Id, out var m) ? [.. m] : [], helpful.GetValueOrDefault(r.Id), replies.GetValueOrDefault(r.Id));
+            return !locked ? p : p with { Text = p.Text is null ? null : ContactStripper.Strip(p.Text), Media = [.. p.Media.Select(CleanMedia)], OwnerReply = p.OwnerReply is null ? null : p.OwnerReply with { Text = ContactStripper.Strip(p.OwnerReply.Text) } };
+        }
     }
 
     private static OwnReview ToOwn(Review r) => new(

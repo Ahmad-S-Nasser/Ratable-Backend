@@ -16,4 +16,9 @@ public sealed class EntitiesOptions
     public int MaxNameLength { get; set; } = 120;
     public int MaxFieldLength { get; set; } = 200;
     public int MaxAlternateNames { get; set; } = 5;
+
+    /// <summary>The seed importer treats a candidate at or above this name score (and inside the distance) as the same place and merges into it; lower candidates go to a moderator.</summary>
+    public double ImportMergeThreshold { get; set; } = 0.9;
+    public int ImportMaxRows { get; set; } = 20000;
+    public int ImportMaxBytes { get; set; } = 8 * 1024 * 1024;
 }

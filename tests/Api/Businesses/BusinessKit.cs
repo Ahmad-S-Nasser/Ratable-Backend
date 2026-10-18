@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.DependencyInjection;
 using Ratable.Api.Tests.Identity;
 using Ratable.Modules.Businesses.Data;
@@ -28,6 +29,22 @@ public static class BusinessKit
         await granter.SetBusinessOwnerAsync(IdOf(user), true);
     }
 
+    /// <summary>The newest code mailed to an address, read from the test mail folder. Null when nothing was sent.</summary>
+    public static string? MailedCode(IdentityApiFactory api, string to)
+    {
+        if (!Directory.Exists(api.MailDirectory)) return null;
+        foreach (var file in new DirectoryInfo(api.MailDirectory).GetFiles("*.txt").OrderByDescending(f => f.Name))
+        {
+            var text = File.ReadAllText(file.FullName);
+            if (!text.StartsWith($"To: {to}\n", StringComparison.Ordinal)) continue;
+            return Regex.Match(text, @"code is (\d{6})").Groups[1].Value;
+        }
+        return null;
+    }
+
+    public static Task<(HttpResponseMessage Response, JsonElement Json)> ConfirmEmail(IdentityApiFactory api, string cookie, string claimId, string? code) =>
+        Send(api, HttpMethod.Post, $"/api/me/claims/{claimId}/email/confirm", cookie, new { code });
+
     public static Task<(HttpResponseMessage Response, JsonElement Json)> Claim(IdentityApiFactory api, string cookie, string entityId, string email = "owner@madinaty-co.com", string role = "owner") =>
         Send(api, HttpMethod.Post, $"/api/entities/{entityId}/claims", cookie, new { companyEmail = email, role, website = "https://madinaty-co.com", note = "I run the place" });
 
@@ -48,6 +65,7 @@ public static class BusinessKit
         var (created, json) = await Claim(api, user.Cookie!, entityId, email);
         Xunit.Assert.Equal(System.Net.HttpStatusCode.Created, created.StatusCode);
         var id = json.GetProperty("id").GetString()!;
+        Xunit.Assert.Equal(System.Net.HttpStatusCode.OK, (await ConfirmEmail(api, user.Cookie!, id, MailedCode(api, email))).Response.StatusCode);
         Xunit.Assert.Equal(System.Net.HttpStatusCode.OK, (await Upload(api, user.Cookie!, id, Png(seed))).Response.StatusCode);
         return id;
     }

@@ -58,6 +58,8 @@ public sealed class IdentityApiFactory : WebApplicationFactory<Program>
 
     /// <summary>Where this factory's proof files go. Removed when the factory is disposed.</summary>
     public string ProofDirectory { get; } = Path.Combine(Path.GetTempPath(), $"ratable-proofs-{Guid.NewGuid():N}");
+    /// <summary>Where this factory's outgoing mail is written (the test mail sender). Removed when the factory is disposed.</summary>
+    public string MailDirectory { get; } = Path.Combine(Path.GetTempPath(), $"ratable-mail-{Guid.NewGuid():N}");
     private readonly Dictionary<string, string> _settings;
 
     public IdentityApiFactory(Dictionary<string, string>? settings = null, bool fakeAi = false, Action<IServiceCollection>? configure = null)
@@ -75,6 +77,7 @@ public sealed class IdentityApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("Identity:PhoneHashKey", Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)));
         builder.UseSetting("Verification:StorageKey", Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)));
         builder.UseSetting("Verification:StoragePath", ProofDirectory);
+        builder.UseSetting("Email:OutboxPath", MailDirectory);
         foreach (var (key, value) in _settings) builder.UseSetting(key, value);
 
         builder.ConfigureServices(services =>
@@ -93,6 +96,7 @@ public sealed class IdentityApiFactory : WebApplicationFactory<Program>
     {
         base.Dispose(disposing);
         if (disposing && Directory.Exists(ProofDirectory)) Directory.Delete(ProofDirectory, recursive: true);
+        if (disposing && Directory.Exists(MailDirectory)) Directory.Delete(MailDirectory, recursive: true);
         if (disposing && MongoFixture.ConnectionString is not null)
             new MongoClient(MongoFixture.ConnectionString).DropDatabase(DatabaseName);
     }

@@ -580,7 +580,7 @@ public sealed class ReviewApiTests
         var (found, compounds) = await Send(api, HttpMethod.Get, "/api/categories/compounds");
         var (_, cafes) = await Send(api, HttpMethod.Get, "/api/categories/restaurants-cafes");
 
-        Assert.Equal(6, all.GetArrayLength());
+        Assert.Equal(7, all.GetArrayLength());
         Assert.Equal(HttpStatusCode.OK, found.StatusCode);
         Assert.Equal(7, compounds.GetProperty("criteria").GetArrayLength());
         Assert.Equal("الصيانة", compounds.GetProperty("criteria")[0].GetProperty("label").GetProperty("ar").GetString());

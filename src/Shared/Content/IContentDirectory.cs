@@ -1,6 +1,6 @@
 namespace Ratable.Shared.Content;
 
-public enum ContentKind { Review, Comment }
+public enum ContentKind { Review, Comment, OwnerReply }
 
 /// <summary>What the Moderation module may know about a piece of content: who wrote it, whether it is anonymous, and whether the public can see it.</summary>
 public sealed record ContentInfo(string Id, string AuthorId, bool IsAnonymous, bool IsPublic, string? CategoryId, string? EntityId = null, bool IsDeleted = false);

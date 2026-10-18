@@ -40,6 +40,13 @@ public sealed class Entity
     /// <summary>Values for the category's own entity fields.</summary>
     public Dictionary<string, string> Fields { get; set; } = [];
     public EntitySummary? Summary { get; set; }
+    /// <summary>How to reach the place. Never part of a public response of a category that gates contact (rule 19); read through IEntityContacts.</summary>
+    public EntityContact? Contact { get; set; }
+
+    /// <summary>Loaded by the seed importer (P11) rather than submitted by a reader.</summary>
+    public bool Seeded { get; set; }
+    /// <summary>The name of the import run that created it.</summary>
+    public string? SeedBatch { get; set; }
     /// <summary>Normalized names (Arabic normalizer) used for search and matching. Rebuilt whenever a name changes.</summary>
     public string SearchTerms { get; set; } = "";
     public EntityStatus Status { get; set; } = EntityStatus.Active;
@@ -53,6 +60,17 @@ public sealed class Entity
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     /// <summary>Used as lastmod in sitemaps.</summary>
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+}
+
+/// <summary>Phone, WhatsApp and links of a place. Owner-entered or imported.</summary>
+public sealed class EntityContact
+{
+    public string? Phone { get; set; }
+    public string? WhatsApp { get; set; }
+    public List<string> Links { get; set; } = [];
+    /// <summary>owner or import.</summary>
+    public string Source { get; set; } = "owner";
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }
 

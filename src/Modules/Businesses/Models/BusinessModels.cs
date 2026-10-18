@@ -27,6 +27,15 @@ public sealed class BusinessClaim
     public DateTime? DocumentUploadedAt { get; set; }
 
     /// <summary>The email domain looks like a free mail service. A moderator sees this flag; it does not decide anything.</summary>
+    /// <summary>The company email was confirmed with a one-time code sent to it. Required before the document is uploaded.</summary>
+    public bool EmailVerified { get; set; }
+    /// <summary>One-way hash of the current code. Cleared once it is used.</summary>
+    public string? EmailCodeHash { get; set; }
+    public DateTime? EmailCodeExpiresAt { get; set; }
+    public int EmailAttempts { get; set; }
+    public int EmailSends { get; set; }
+    public DateTime? EmailLastSentAt { get; set; }
+
     public bool FreeEmail { get; set; }
     /// <summary>The email domain appears in the place's website or links. Shown to the moderator as a hint.</summary>
     public bool DomainMatchesPlace { get; set; }
@@ -50,7 +59,9 @@ public sealed class BusinessOwnership
     public DateTime LastSeenAt { get; set; } = DateTime.UtcNow;
 }
 
-/// <summary>The owner's public reply under a review. One per review. Never holds anything about the reviewer.</summary>
+public enum ReplyStatus { PendingModeration, Published, Hidden }
+
+/// <summary>The owner's public reply under a review. One per review. Never holds anything about the reviewer. Every reply and every edit is moderated first.</summary>
 public sealed class OwnerReply
 {
     [BsonId, BsonRepresentation(BsonType.ObjectId)] public string Id { get; set; } = ObjectId.GenerateNewId().ToString();
@@ -58,6 +69,11 @@ public sealed class OwnerReply
     [BsonRepresentation(BsonType.ObjectId)] public string EntityId { get; set; } = "";
     [BsonRepresentation(BsonType.ObjectId)] public string UserId { get; set; } = "";
     public string Text { get; set; } = "";
+    public ReplyStatus Status { get; set; } = ReplyStatus.PendingModeration;
+    /// <summary>Counts every version of the text, so each one is screened once.</summary>
+    public int Revision { get; set; } = 1;
+    /// <summary>Why a moderator hid it. Shown to the owner, never to the public.</summary>
+    public string? ModerationReason { get; set; }
     public bool Deleted { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? EditedAt { get; set; }

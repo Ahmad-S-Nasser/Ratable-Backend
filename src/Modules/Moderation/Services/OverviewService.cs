@@ -23,6 +23,7 @@ public sealed class OverviewService(
         {
             new("reviews", await cases.CountOpenAsync(ContentKind.Review, ct)),
             new("comments", await cases.CountOpenAsync(ContentKind.Comment, ct)),
+            new("replies", await cases.CountOpenAsync(ContentKind.OwnerReply, ct)),
             new("reports", await reports.CountOpenAsync(ct)),
             new("disputes", await disputes.CountOpenAsync(ct)),
         };
