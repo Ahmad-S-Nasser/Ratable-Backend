@@ -127,6 +127,12 @@ public sealed class AiClient(
             {
                 throw;
             }
+            catch (AiProviderCapReachedException)
+            {
+                // The service's own budget is used up: same as our cap, the item goes to a person.
+                await LogAsync(AiCallStatus.Deferred, "service_cap");
+                return Finish(AiCallStatus.Deferred, "service_cap");
+            }
             catch (Exception ex)
             {
                 // The message is logged; exceptions from providers must not carry request content (see AiProviderException).

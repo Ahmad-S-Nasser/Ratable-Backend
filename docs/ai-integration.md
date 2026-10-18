@@ -147,3 +147,12 @@ Rules that apply to every use case: a `Deferred` or `Failed` result is never tre
 | Spend report | `GET /api/admin/ai/spend` (admin) |
 | Fakes for tests | `src/Modules/Ai/Providers/Fakes.cs` |
 | First real uses | `src/Modules/Entities/Services/DuplicateJudge.cs` (duplicate judge), `src/Modules/Verification/Services/ProofChecker.cs` (proof check) |
+
+## The Ratable AI microservice (connected)
+The service built by the AI team is wired in as `IAiProvider` (`RatableAiProvider`, `POST /v1/complete`, bearer token). It is active when both settings exist:
+- `RatableAi__BaseUrl` (for example the service address on port 11000) and `RatableAi__ServiceKey` (secret, environment only, never in a file).
+- Optional `RatableAi__TimeoutSeconds` (default 15) and `RatableAi__AllowUntrustedCertInDev` (accepts a self-signed certificate in the Development environment only).
+- `Ai:Models` maps our tiers to `gemini-2.5-flash` (Small) and `gemini-2.5-pro` (Standard) with the guide's prices; the provider sends the tier name.
+- HTTP 429 `deferred_cap_reached` from the service becomes a Deferred result (human queue). A timeout or 5xx is retried once, then fails. Errors never carry request content.
+- Our own cap (`Ai:DailyCapUsd`) still applies first, so the two budgets do not have to agree.
+- Video: the service only plans anonymisation (face boxes, a command, a cover). Our worker still runs ffmpeg itself; we do not run a command string received over the network.

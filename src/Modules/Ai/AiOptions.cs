@@ -9,7 +9,7 @@ public sealed class AiOptions
     public decimal DailyCapUsd { get; set; } = 3.0m;
 
     /// <summary>Tier to the model name sent to the external service (it may map or ignore it).</summary>
-    public Dictionary<string, string> Models { get; set; } = new() { ["Small"] = "claude-haiku-5-5", ["Standard"] = "claude-sonnet-5-5" };
+    public Dictionary<string, string> Models { get; set; } = new() { ["Small"] = "gemini-2.5-flash", ["Standard"] = "gemini-2.5-pro" };
 
     /// <summary>Tier to effort (low, medium, high, max). Lower effort means less thinking and a smaller bill.</summary>
     public Dictionary<string, string> Effort { get; set; } = new() { ["Small"] = "low", ["Standard"] = "medium" };

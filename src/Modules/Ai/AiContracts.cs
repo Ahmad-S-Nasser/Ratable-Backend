@@ -17,4 +17,7 @@ public sealed record AiProviderRequest(string Model, string? System, string Prom
 public sealed record AiProviderResponse(string Text, long InputTokens, long OutputTokens, bool Truncated);
 
 /// <summary>Thrown by a provider for any failure. The message is logged, so it must not contain request content.</summary>
-public sealed class AiProviderException(string message, Exception? inner = null) : Exception(message, inner);
+public class AiProviderException(string message, Exception? inner = null) : Exception(message, inner);
+
+/// <summary>The AI service says its daily budget is used up (HTTP 429 deferred_cap_reached). AiClient turns this into a Deferred result.</summary>
+public sealed class AiProviderCapReachedException() : AiProviderException("deferred_cap_reached");
