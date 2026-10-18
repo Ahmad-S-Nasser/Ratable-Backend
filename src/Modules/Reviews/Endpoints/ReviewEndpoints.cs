@@ -9,6 +9,7 @@ using Ratable.Modules.Reviews.Services;
 using Ratable.Shared.Auth;
 using Ratable.Shared.Authors;
 using Ratable.Shared.Catalog;
+using Microsoft.Extensions.Options;
 using Ratable.Shared.Data;
 using Ratable.Shared.Media;
 
@@ -36,13 +37,16 @@ public sealed record ReviewHistory(PublicReview Current, List<PublicRevision> Ea
 /// <summary>The author's own view of their review, including what state it is in.</summary>
 public sealed record OwnReview(
     string Id, string EntityId, string Status, bool IsAnonymous, bool Verified, List<AnswerDto> Answers, double? Overall, string? Text,
-    string Language, int RevisionNumber, DateTime CreatedAt, DateTime UpdatedAt, bool UnderReview, string? ModerationReason);
+    string Language, int RevisionNumber, DateTime CreatedAt, DateTime UpdatedAt, bool UnderReview, string? ModerationReason, string? Verdict = null);
 
 public sealed record CriterionScoreDto(string CriterionId, int Answers, double? Score);
-public sealed record ScoreResponse(double? Overall, int VerifiedReviews, int PublishedReviews, int MinAnswersForCriterion, List<CriterionScoreDto> Criteria);
+public sealed record VerdictDto(string Kind, int SharePercent, int Votes);
+
+public sealed record ScoreResponse(double? Overall, int VerifiedReviews, int PublishedReviews, int MinAnswersForCriterion, List<CriterionScoreDto> Criteria, VerdictDto? Verdict = null);
 
 /// <summary>A place in a category listing: its verified score and how many verified reviews that is built from. Nothing here depends on payment.</summary>
-public sealed record PlaceCard(string Id, LocalizedText Name, Dictionary<string, string> Slugs, string? City, double? Overall, int VerifiedReviews, DateTime LastModified);
+public sealed record PlaceCard(string Id, LocalizedText Name, Dictionary<string, string> Slugs, string? City, double? Overall, int VerifiedReviews, DateTime LastModified,
+    VerdictDto? Verdict = null, string? PriceBand = null, double? DistanceMeters = null, List<string>? TopCriteria = null);
 
 public sealed record PlaceList(List<PlaceCard> Places, int Total);
 
@@ -73,22 +77,15 @@ public static class ReviewEndpoints
     /// The places of a category ranked by verified score first, then by number of verified reviews, then by name; places with no verified score come
     /// last. Nothing paid changes the order (rule 6). Scores are worked out per request over at most 500 places; storing them is a later optimisation.
     /// </summary>
-    private static async Task<IResult> Places(string categoryId, int? limit, int? skip, string? lang, ReviewRepository repository, IEntityCatalog catalog, CancellationToken ct)
+    private static async Task<IResult> Places(
+        string categoryId, int? limit, int? skip, string? lang, double? lat, double? lng, ReviewRepository repository, IEntityCatalog catalog,
+        IOptions<VerdictOptions> verdictOptions, CancellationToken ct)
     {
         if (await catalog.GetCategoryAsync(categoryId, ct) is null) return Results.NotFound();
         var entries = await catalog.ListActiveByCategoryAsync(categoryId, 500, ct);
         var reviews = (await repository.ListScoringForEntitiesAsync([.. entries.Select(e => e.Id)], ct)).ToLookup(r => r.EntityId);
-        var key = lang == "en" ? "en" : "ar";
-        var ranked = entries
-            .Select(e =>
-            {
-                var score = ScoreCalculator.ForEntity(reviews[e.Id]);
-                var latest = reviews[e.Id].Select(x => x.UpdatedAt).DefaultIfEmpty(DateTime.MinValue).Max();
-                return new PlaceCard(e.Id, e.Name, new Dictionary<string, string>(e.Slugs), e.City, score.Overall, score.VerifiedReviewCount, e.UpdatedAt > latest ? e.UpdatedAt : latest);
-            })
-            .OrderByDescending(p => p.Overall.HasValue).ThenByDescending(p => p.Overall).ThenByDescending(p => p.VerifiedReviews)
-            .ThenBy(p => key == "en" ? p.Name.En ?? p.Name.Ar : p.Name.Ar ?? p.Name.En, StringComparer.CurrentCulture)
-            .ToList();
+        // The visitor's location is used for this answer only: it is not stored anywhere and does not change the order.
+        var ranked = PlaceRanking.Rank(entries, reviews, verdictOptions.Value, lang ?? "ar", lat is { } a && lng is { } b ? (a, b) : null);
         var page = ranked.Skip(Math.Max(0, skip ?? 0)).Take(Math.Clamp(limit ?? 20, 1, 50)).ToList();
         return Results.Ok(new PlaceList(page, ranked.Count));
     }
@@ -138,6 +135,7 @@ public static class ReviewEndpoints
         ReviewFailure.InvalidAnswer => Results.BadRequest(new ErrorBody("invalid_answer", r.Detail)),
         ReviewFailure.DuplicateCriterion => Results.BadRequest(new ErrorBody("duplicate_criterion", r.Detail)),
         ReviewFailure.InvalidText => Results.BadRequest(new ErrorBody("invalid_text", r.Detail)),
+        ReviewFailure.InvalidVerdict => Results.BadRequest(new ErrorBody("invalid_verdict")),
         ReviewFailure.AlreadyReviewed => Results.Conflict(new { error = "already_reviewed", reviewId = r.Review?.Id, status = r.Review?.Status.ToString() }),
         _ => Results.Conflict(new ErrorBody("edit_conflict")),
     };
@@ -150,13 +148,17 @@ public static class ReviewEndpoints
         return Results.Ok(await ToPublic(found, authors, media, ct));
     }
 
-    private static async Task<IResult> Score(string entityId, ReviewRepository repository, IEntityCatalog catalog, CancellationToken ct)
+    private static async Task<IResult> Score(string entityId, ReviewRepository repository, IEntityCatalog catalog, IOptions<VerdictOptions> verdictOptions, CancellationToken ct)
     {
         if (await catalog.GetActiveEntityAsync(entityId, ct) is null) return Results.NotFound();
-        var score = ScoreCalculator.ForEntity(await repository.ListScoringAsync(entityId, ct));
+        var scoring = await repository.ListScoringAsync(entityId, ct);
+        var score = ScoreCalculator.ForEntity(scoring);
+        // The verdict is worked out beside the score from the same verified reviews. It cannot change the score.
+        var verdict = VerdictCalculator.ForEntity(scoring, score.Overall, score.VerifiedReviewCount, verdictOptions.Value);
         var published = (int)await repository.CountPublishedAsync(entityId, ct);
         return Results.Ok(new ScoreResponse(score.Overall, score.VerifiedReviewCount, published, ScoreCalculator.MinAnswersForCriterion,
-            [.. score.Criteria.Select(c => new CriterionScoreDto(c.CriterionId, c.AnswerCount, c.Score))]));
+            [.. score.Criteria.Select(c => new CriterionScoreDto(c.CriterionId, c.AnswerCount, c.Score))],
+            verdict is null ? null : new VerdictDto(verdict.Kind, verdict.SharePercent, verdict.Votes)));
     }
 
     /// <summary>The public history: the current version and the earlier versions that were public when they were replaced.</summary>
@@ -193,5 +195,5 @@ public static class ReviewEndpoints
     private static OwnReview ToOwn(Review r) => new(
         r.Id, r.EntityId, r.Status.ToString(), r.IsAnonymous, r.Verification.Level == VerificationLevel.Verified, ToAnswers(r.Answers),
         ScoreCalculator.ReviewOverall(r.Answers), r.Text, r.Language, r.RevisionNumber, r.CreatedAt, r.UpdatedAt, r.UnderReview,
-        r.Status == ReviewStatus.Hidden ? r.ModerationReason : null);
+        r.Status == ReviewStatus.Hidden ? r.ModerationReason : null, r.Verdict);
 }

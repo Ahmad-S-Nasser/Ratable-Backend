@@ -14,7 +14,7 @@ namespace Ratable.Modules.Reviews.Services;
 /// <summary>One answer as sent by a client. Value is a number 1 to 5 for a tap, or the option value for a choice or yes/no.</summary>
 public sealed record AnswerInput(string? CriterionId, JsonElement Value);
 
-public sealed record ReviewInput(List<AnswerInput>? Answers, string? Text, string? Language, bool? IsAnonymous);
+public sealed record ReviewInput(List<AnswerInput>? Answers, string? Text, string? Language, bool? IsAnonymous, string? Verdict = null);
 
 public enum ReviewFailure
 {
@@ -24,6 +24,7 @@ public enum ReviewFailure
     InvalidAnswer,
     DuplicateCriterion,
     InvalidText,
+    InvalidVerdict,
     AlreadyReviewed,
     NotFound,
     Conflict,
@@ -74,6 +75,7 @@ public sealed class ReviewService(
             Answers = content.Answers!,
             Text = content.Text,
             Language = content.Language!,
+            Verdict = content.Verdict,
             Status = ReviewStatus.PendingModeration, // P8 decides when it is published
             Verification = new ReviewVerification { Level = VerificationLevel.Unverified },
             RevisionNumber = 1,
@@ -144,6 +146,7 @@ public sealed class ReviewService(
             Answers = current.Answers,
             Text = current.Text,
             Language = current.Language,
+            Verdict = current.Verdict,
             ChangedAt = current.UpdatedAt,
             ChangedBy = userId,
             SupersededAt = now,
@@ -163,6 +166,7 @@ public sealed class ReviewService(
         current.Answers = content.Answers!;
         current.Text = content.Text;
         current.Language = content.Language!;
+        current.Verdict = content.Verdict;
         current.IsAnonymous = anonymous;
         current.RevisionNumber = expected + 1;
         current.UpdatedAt = now;
@@ -212,7 +216,7 @@ public sealed class ReviewService(
 
     // ---- validation ----
 
-    private sealed record Content(ReviewFailure Failure, string? Detail, List<ReviewAnswer>? Answers, string? Text, string? Language);
+    private sealed record Content(ReviewFailure Failure, string? Detail, List<ReviewAnswer>? Answers, string? Text, string? Language, string? Verdict = null);
 
     private static Content Validate(CategoryInfo category, ReviewInput input)
     {
@@ -249,7 +253,11 @@ public sealed class ReviewService(
         if (language is not (null or "" or "ar" or "en")) return Fail(ReviewFailure.InvalidText, "language");
         if (string.IsNullOrEmpty(language)) language = GuessLanguage(text);
 
-        return new Content(ReviewFailure.None, null, answers, text, language);
+        // The verdict is optional, and only for categories that have verdicts. An empty value means none.
+        var verdict = string.IsNullOrWhiteSpace(input.Verdict) ? null : input.Verdict.Trim().ToLowerInvariant();
+        if (verdict is not null && (!category.VerdictEnabled || !Scoring.Verdicts.All.Contains(verdict))) return Fail(ReviewFailure.InvalidVerdict);
+
+        return new Content(ReviewFailure.None, null, answers, text, language, verdict);
     }
 
     private static Content Fail(ReviewFailure failure, string? detail = null) => new(failure, detail, null, null, null);
@@ -274,6 +282,7 @@ public sealed class ReviewService(
     private static bool SameContent(Review current, Content content) =>
         current.Text == content.Text &&
         current.Language == content.Language &&
+        current.Verdict == content.Verdict &&
         current.Answers.Count == content.Answers!.Count &&
         current.Answers.OrderBy(a => a.CriterionId).Zip(content.Answers.OrderBy(a => a.CriterionId))
             .All(p => p.First.CriterionId == p.Second.CriterionId && p.First.Score == p.Second.Score && p.First.OptionValue == p.Second.OptionValue);

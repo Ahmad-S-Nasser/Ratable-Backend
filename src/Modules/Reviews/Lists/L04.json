@@ -1,0 +1,15 @@
+{
+  "_id": "L04",
+  "title": {
+    "ar": "أفضل المدارس والحضانات",
+    "en": "Top schools and nurseries"
+  },
+  "slug": {
+    "ar": "أفضل-المدارس-والحضانات",
+    "en": "top-schools-and-nurseries"
+  },
+  "categoryId": "schools-nurseries",
+  "minReviews": 3,
+  "limit": 10,
+  "active": true
+}

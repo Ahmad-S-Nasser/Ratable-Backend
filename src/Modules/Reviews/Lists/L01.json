@@ -1,0 +1,15 @@
+{
+  "_id": "L01",
+  "title": {
+    "ar": "أفضل الكمبوندات",
+    "en": "Top compounds"
+  },
+  "slug": {
+    "ar": "أفضل-الكمبوندات",
+    "en": "top-compounds"
+  },
+  "categoryId": "compounds",
+  "minReviews": 3,
+  "limit": 10,
+  "active": true
+}

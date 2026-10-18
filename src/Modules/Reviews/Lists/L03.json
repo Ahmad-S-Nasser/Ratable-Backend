@@ -1,0 +1,15 @@
+{
+  "_id": "L03",
+  "title": {
+    "ar": "أفضل الفنادق والمنتجعات",
+    "en": "Top hotels and resorts"
+  },
+  "slug": {
+    "ar": "أفضل-الفنادق-والمنتجعات",
+    "en": "top-hotels-and-resorts"
+  },
+  "categoryId": "hotels-resorts",
+  "minReviews": 3,
+  "limit": 10,
+  "active": true
+}

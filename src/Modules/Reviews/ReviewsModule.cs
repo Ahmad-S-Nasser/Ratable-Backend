@@ -26,7 +26,10 @@ public static class ReviewsModule
         services.AddSingleton<IReviewVerifier, ReviewVerifier>();
         services.AddSingleton<IContentModerator, ReviewContentModerator>();
         services.AddSingleton<ReviewService>();
+        services.AddSingleton<Lists.ListRepository>();
+        services.AddSeeder<Lists.ListSeeder>();
         services.Configure<Seo.SeoOptions>(configuration.GetSection("Seo"));
+        services.Configure<Scoring.VerdictOptions>(configuration.GetSection(Scoring.VerdictOptions.Section));
         services.AddHttpClient();
         services.AddSingleton<Seo.PlaceChangeFeed>();
         services.AddSingleton<Seo.SeoNotifier>();

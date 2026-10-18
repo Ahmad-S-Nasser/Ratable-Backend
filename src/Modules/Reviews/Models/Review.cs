@@ -36,6 +36,10 @@ public sealed class Review
     public List<ReviewAnswer> Answers { get; set; } = [];
     public string? Text { get; set; }
     public string Language { get; set; } = "ar";
+
+    /// <summary>The optional verdict the reviewer chose: worth, not_worth or hidden_gem. It feeds the place's verdict sticker (verified reviews only) and never the score.</summary>
+    public string? Verdict { get; set; }
+
     public ReviewVerification Verification { get; set; } = new();
     public ReviewStatus Status { get; set; } = ReviewStatus.PendingModeration;
     public int RevisionNumber { get; set; } = 1;
@@ -60,6 +64,7 @@ public sealed class ReviewRevision
     public List<ReviewAnswer> Answers { get; set; } = [];
     public string? Text { get; set; }
     public string Language { get; set; } = "ar";
+    public string? Verdict { get; set; }
     public DateTime ChangedAt { get; set; } = DateTime.UtcNow;
     [BsonRepresentation(BsonType.ObjectId)] public string ChangedBy { get; set; } = "";
     /// <summary>When a newer version replaced this one. The edited-on date shown to readers.</summary>

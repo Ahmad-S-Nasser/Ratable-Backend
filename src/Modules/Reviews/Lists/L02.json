@@ -1,0 +1,19 @@
+{
+  "_id": "L02",
+  "title": {
+    "ar": "أفضل المطاعم في القاهرة",
+    "en": "Top restaurants in Cairo"
+  },
+  "slug": {
+    "ar": "أفضل-المطاعم-في-القاهرة",
+    "en": "top-restaurants-in-cairo"
+  },
+  "categoryId": "restaurants-cafes",
+  "minReviews": 3,
+  "limit": 10,
+  "active": true,
+  "area": {
+    "ar": "القاهرة",
+    "en": "Cairo"
+  }
+}

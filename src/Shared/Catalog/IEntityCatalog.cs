@@ -6,7 +6,9 @@ namespace Ratable.Shared.Catalog;
 public sealed record EntityRef(string Id, string CategoryId, IReadOnlyList<string> Names);
 
 /// <summary>What a listing needs to show about a public entity.</summary>
-public sealed record CatalogEntry(string Id, string CategoryId, LocalizedText Name, IReadOnlyDictionary<string, string> Slugs, string? City, string? Address, DateTime UpdatedAt);
+public sealed record CatalogEntry(
+    string Id, string CategoryId, LocalizedText Name, IReadOnlyDictionary<string, string> Slugs, string? City, string? Address, DateTime UpdatedAt,
+    IReadOnlyDictionary<string, string>? Fields = null, double? Longitude = null, double? Latitude = null);
 
 public enum CriterionKind { Rating5, Choice, YesNo }
 
@@ -17,7 +19,7 @@ public sealed record CriterionInfo(string Id, CriterionKind Kind, IReadOnlyList<
 
 public sealed record CategoryInfo(
     string Id, bool AnonymousByDefault, IReadOnlyList<CriterionInfo> Criteria, IReadOnlyList<string> AcceptedProofTypes,
-    bool RatesIndividuals = false, bool ContactGated = false);
+    bool RatesIndividuals = false, bool ContactGated = false, bool VerdictEnabled = true);
 
 /// <summary>
 /// What other modules (Reviews first) may know about entities and categories, without touching the Entities module's collections.

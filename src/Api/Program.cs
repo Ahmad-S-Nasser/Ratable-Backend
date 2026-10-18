@@ -16,6 +16,7 @@ using Ratable.Modules.Moderation;
 using Ratable.Modules.Moderation.Endpoints;
 using Ratable.Modules.Reviews;
 using Ratable.Modules.Reviews.Endpoints;
+using Ratable.Modules.Reviews.Lists;
 using Ratable.Modules.Verification;
 using Ratable.Modules.Verification.Endpoints;
 using Ratable.Shared.Data;
@@ -64,6 +65,7 @@ app.MapCommentEndpoints();
 app.MapModerationEndpoints();
 app.MapVerificationEndpoints();
 app.MapMediaEndpoints();
+app.MapListEndpoints();
 
 app.MapOpenApi("/openapi/{documentName}.json");
 
