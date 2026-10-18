@@ -54,6 +54,21 @@ public sealed class ReviewRepository(IMongoDatabase database) : MongoRepository<
             .Project<Review>(Builders<Review>.Projection.Include(r => r.Answers).Include(r => r.Status).Include(r => r.Verification).Include(r => r.Verdict))
             .ToListAsync(ct);
 
+    /// <summary>Counting reviews (Published and Verified) with their dates, for the score trend on a business dashboard.</summary>
+    public async Task<List<Review>> ListScoringWithDatesAsync(string entityId, DateTime since, CancellationToken ct = default) =>
+        await Collection.Find(r => r.EntityId == entityId && r.Status == ReviewStatus.Published && r.Verification.Level == VerificationLevel.Verified && r.CreatedAt >= since)
+            .Project<Review>(Builders<Review>.Projection.Include(r => r.Answers).Include(r => r.CreatedAt))
+            .ToListAsync(ct);
+
+    /// <summary>The counting reviews of a whole category, for the category average on a business dashboard.</summary>
+    public async Task<List<Review>> ListScoringForCategoryAsync(string categoryId, CancellationToken ct = default) =>
+        await Collection.Find(r => r.CategoryId == categoryId && r.Status == ReviewStatus.Published && r.Verification.Level == VerificationLevel.Verified)
+            .Project<Review>(Builders<Review>.Projection.Include(r => r.EntityId).Include(r => r.Answers).Include(r => r.Status).Include(r => r.Verification))
+            .ToListAsync(ct);
+
+    public Task<long> CountPublishedSinceAsync(string entityId, DateTime since, CancellationToken ct = default) =>
+        Collection.CountDocumentsAsync(r => r.EntityId == entityId && r.Status == ReviewStatus.Published && r.CreatedAt > since, cancellationToken: ct);
+
     /// <summary>The answers of every counting review (Published and Verified) of several entities at once, for listings.</summary>
     public async Task<List<Review>> ListScoringForEntitiesAsync(IReadOnlyCollection<string> entityIds, CancellationToken ct = default) =>
         await Collection.Find(r => entityIds.Contains(r.EntityId) && r.Status == ReviewStatus.Published && r.Verification.Level == VerificationLevel.Verified)

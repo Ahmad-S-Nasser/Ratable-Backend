@@ -26,4 +26,7 @@ public static class Collections
     public const string MediaItems = "media_items";
     public const string AiCalls = "ai_calls";
     public const string AiCache = "ai_cache";
+    public const string BusinessClaims = "business_claims";
+    public const string BusinessOwnerships = "business_ownerships";
+    public const string OwnerReplies = "owner_replies";
 }

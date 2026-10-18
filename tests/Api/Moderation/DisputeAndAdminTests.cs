@@ -30,6 +30,7 @@ public sealed class DisputeAndAdminTests
         var business = await api.SignInAsync("+201555555555");
         await Send(api, HttpMethod.Put, $"/api/admin/users/{IdOf(business)}/roles", admin.Cookie, new { roles = new[] { "BusinessOwner" } });
         var entity = await SeedEntity(api);
+        await Businesses.BusinessKit.MakeOwner(api, business, entity.Id);
         var review = await CreateReview(api, author.Cookie!, entity.Id, new { answers = Answers(("security", 1)), text = "The management ignores every complaint" });
         return new World(api, admin, author, business, entity.Id, review);
     }

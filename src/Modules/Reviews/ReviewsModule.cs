@@ -25,6 +25,7 @@ public static class ReviewsModule
         services.TryAddSingleton<IAuthorPresenter, AuthorPresenter>();
         services.AddSingleton<IReviewVerifier, ReviewVerifier>();
         services.AddSingleton<IContentModerator, ReviewContentModerator>();
+        services.AddSingleton<Ratable.Shared.Businesses.IBusinessReviewSource, BusinessReviewSource>();
         services.AddSingleton<ReviewService>();
         services.AddSingleton<Votes.ReviewVoteRepository>();
         services.AddIndexInitializer<Votes.ReviewVoteIndexInitializer>();

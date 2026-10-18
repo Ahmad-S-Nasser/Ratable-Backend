@@ -13,6 +13,7 @@ using Microsoft.Extensions.Options;
 using Ratable.Shared.Data;
 using Ratable.Modules.Reviews.Votes;
 using Ratable.Shared.Media;
+using Ratable.Shared.Businesses;
 
 namespace Ratable.Modules.Reviews.Endpoints;
 
@@ -28,7 +29,7 @@ public sealed record AnswerDto(string CriterionId, int Score, string? OptionValu
 /// </summary>
 public sealed record PublicReview(
     string Id, bool Anonymous, PublicAuthor? Author, List<AnswerDto> Answers, double? Overall, string? Text, string Language, bool Verified,
-    DateTime CreatedAt, DateTime? EditedOn, int RevisionNumber, bool UnderReview, List<PublicMediaItem> Media, int HelpfulCount = 0);
+    DateTime CreatedAt, DateTime? EditedOn, int RevisionNumber, bool UnderReview, List<PublicMediaItem> Media, int HelpfulCount = 0, OwnerReplyInfo? OwnerReply = null);
 
 /// <summary>An earlier version. It has no author field: the author is the review's, and is shown (or not) with the current version.</summary>
 public sealed record PublicRevision(int RevisionNumber, List<AnswerDto> Answers, double? Overall, string? Text, string Language, DateTime WrittenAt, DateTime ReplacedAt);
@@ -131,6 +132,7 @@ public static class ReviewEndpoints
             ? Results.Created($"/api/me/reviews?entityId={r.Review!.EntityId}", ToOwn(r.Review))
             : Results.Ok(ToOwn(r.Review!)),
         ReviewFailure.EntityNotFound => Results.NotFound(new ErrorBody("entity_not_found")),
+        ReviewFailure.OwnEntity => Results.Json(new ErrorBody("own_entity"), statusCode: StatusCodes.Status403Forbidden),
         ReviewFailure.NotFound => Results.NotFound(new ErrorBody("review_not_found")),
         ReviewFailure.NoAnswers => Results.BadRequest(new ErrorBody("no_answers")),
         ReviewFailure.InvalidAnswer => Results.BadRequest(new ErrorBody("invalid_answer", r.Detail)),
@@ -142,11 +144,11 @@ public static class ReviewEndpoints
     };
 
     private static async Task<IResult> List(
-        string entityId, int? limit, int? skip, string? sort, bool? verified, ReviewRepository repository, IEntityCatalog catalog, IAuthorPresenter authors, IEnumerable<IReviewMedia> media, ReviewVoteRepository votes, CancellationToken ct)
+        string entityId, int? limit, int? skip, string? sort, bool? verified, ReviewRepository repository, IEntityCatalog catalog, IAuthorPresenter authors, IEnumerable<IReviewMedia> media, ReviewVoteRepository votes, IEnumerable<IOwnerReplyDirectory> ownerReplies, CancellationToken ct)
     {
         if (await catalog.GetActiveEntityAsync(entityId, ct) is null) return Results.NotFound();
         var found = await repository.ListPublishedAsync(entityId, Math.Clamp(limit ?? 20, 1, 50), Math.Max(0, skip ?? 0), sort, verified == true, ct);
-        return Results.Ok(await ToPublic(found, authors, media, votes, ct));
+        return Results.Ok(await ToPublic(found, authors, media, votes, ownerReplies, ct));
     }
 
     private static async Task<IResult> Score(string entityId, ReviewRepository repository, IEntityCatalog catalog, IOptions<VerdictOptions> verdictOptions, CancellationToken ct)
@@ -164,12 +166,12 @@ public static class ReviewEndpoints
 
     /// <summary>The public history: the current version and the earlier versions that were public when they were replaced.</summary>
     private static async Task<IResult> History(
-        string id, ReviewRepository repository, ReviewRevisionRepository revisions, IAuthorPresenter authors, IEnumerable<IReviewMedia> media, ReviewVoteRepository votes, CancellationToken ct)
+        string id, ReviewRepository repository, ReviewRevisionRepository revisions, IAuthorPresenter authors, IEnumerable<IReviewMedia> media, ReviewVoteRepository votes, IEnumerable<IOwnerReplyDirectory> ownerReplies, CancellationToken ct)
     {
         var review = await repository.GetAsync(id, ct);
         if (review is not { Status: ReviewStatus.Published }) return Results.NotFound();
         var earlier = (await revisions.ListAsync(review.Id, ct)).Where(r => r.StatusWhenSuperseded == ReviewStatus.Published);
-        var current = (await ToPublic([review], authors, media, votes, ct)).Single();
+        var current = (await ToPublic([review], authors, media, votes, ownerReplies, ct)).Single();
         return Results.Ok(new ReviewHistory(current,
             [.. earlier.Select(r => new PublicRevision(r.RevisionNumber, ToAnswers(r.Answers), ScoreCalculator.ReviewOverall(r.Answers), r.Text, r.Language, r.ChangedAt, r.SupersededAt))]));
     }
@@ -180,7 +182,7 @@ public static class ReviewEndpoints
     private static List<AnswerDto> ToAnswers(IEnumerable<ReviewAnswer> answers) => [.. answers.Select(a => new AnswerDto(a.CriterionId, a.Score, a.OptionValue))];
 
     /// <summary>The one place a review becomes a public response. The author comes from the presenter and nowhere else.</summary>
-    private static async Task<List<PublicReview>> ToPublic(IReadOnlyCollection<Review> reviews, IAuthorPresenter authors, IEnumerable<IReviewMedia> media, ReviewVoteRepository votes, CancellationToken ct)
+    private static async Task<List<PublicReview>> ToPublic(IReadOnlyCollection<Review> reviews, IAuthorPresenter authors, IEnumerable<IReviewMedia> media, ReviewVoteRepository votes, IEnumerable<IOwnerReplyDirectory> ownerReplies, CancellationToken ct)
     {
         var helpful = await votes.CountsAsync([.. reviews.Select(r => r.Id)], ct);
         var presented = await authors.PresentAsync([.. reviews.Select(r => new AuthorSlot(r.Id, r.UserId, r.IsAnonymous))], ct);
@@ -188,10 +190,13 @@ public static class ReviewEndpoints
         var files = new Dictionary<string, IReadOnlyList<PublicMediaItem>>();
         foreach (var source in media)
             foreach (var (reviewId, items) in await source.GetPublicAsync([.. reviews.Select(r => (r.Id, r.IsAnonymous))], ct)) files[reviewId] = items;
+        var replies = new Dictionary<string, OwnerReplyInfo>();
+        foreach (var directory in ownerReplies)
+            foreach (var (reviewId, reply) in await directory.GetAsync([.. reviews.Select(r => r.Id)], ct)) replies[reviewId] = reply;
         return [.. reviews.Select(r => new PublicReview(
             r.Id, presented[r.Id] is null, presented[r.Id], ToAnswers(r.Answers), ScoreCalculator.ReviewOverall(r.Answers), r.Text, r.Language,
             r.Verification.Level == VerificationLevel.Verified, r.CreatedAt, r.RevisionNumber > 1 ? r.UpdatedAt : null, r.RevisionNumber, r.UnderReview,
-            files.TryGetValue(r.Id, out var m) ? [.. m] : [], helpful.GetValueOrDefault(r.Id)))];
+            files.TryGetValue(r.Id, out var m) ? [.. m] : [], helpful.GetValueOrDefault(r.Id), replies.GetValueOrDefault(r.Id)))];
     }
 
     private static OwnReview ToOwn(Review r) => new(

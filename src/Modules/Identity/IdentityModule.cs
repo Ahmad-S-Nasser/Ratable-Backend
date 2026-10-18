@@ -28,6 +28,7 @@ public static class IdentityModule
         services.AddSingleton<IPublicProfiles>(sp => sp.GetRequiredService<IdentityDirectory>());
         services.AddSingleton<IAccountDirectory>(sp => sp.GetRequiredService<IdentityDirectory>());
         services.AddSingleton<IAccountSignals, AccountSignalsService>();
+        services.AddSingleton<Ratable.Shared.Businesses.IBusinessRoleGranter, BusinessRoleGranter>();
         services.AddSingleton<OtpService>();
 
         // Verify via WhatsApp: the reverse route is the default, the code route is the alternative. The number-type check and the code sender have no real provider yet.

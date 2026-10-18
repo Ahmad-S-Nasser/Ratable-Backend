@@ -2,6 +2,7 @@ using Microsoft.Extensions.Options;
 using Ratable.Modules.Moderation.Data;
 using Ratable.Modules.Moderation.Models;
 using Ratable.Shared.Audit;
+using Ratable.Shared.Businesses;
 using Ratable.Shared.Content;
 using Ratable.Shared.Moderation;
 
@@ -68,7 +69,7 @@ public sealed record ReasonCount(string Reason, int Count);
 public sealed record ReportGroup(
     string ResolveId, string TargetType, string TargetId, int ReportCount, List<ReasonCount> Reasons, List<string> Notes, DateTime FirstReportedAt, ModerationContentView? Content);
 
-public enum DisputeFailure { None, NotFound, InvalidReason, OwnReview, AlreadyOpen, WrongState, ReasonRequired }
+public enum DisputeFailure { None, NotFound, InvalidReason, OwnReview, AlreadyOpen, WrongState, ReasonRequired, NotOwner }
 
 public sealed record DisputeResult(DisputeFailure Failure, Dispute? Dispute = null)
 {
@@ -83,6 +84,7 @@ public sealed class DisputeService(
     DisputeRepository disputes,
     IEnumerable<IContentModerator> moderators,
     IEnumerable<IContentDirectory> directories,
+    IEnumerable<IEntityOwnership> ownership,
     IAuditLog audit,
     IOptions<ModerationOptions> options,
     TimeProvider time)
@@ -97,6 +99,10 @@ public sealed class DisputeService(
         var review = await directories.First(d => d.Kind == ContentKind.Review).GetAsync(reviewId, ct);
         if (review is not { IsPublic: true }) return new(DisputeFailure.NotFound);
         if (review.AuthorId == userId) return new(DisputeFailure.OwnReview);
+        // Only the account that runs the place the review is about may dispute it.
+        var owns = false;
+        foreach (var o in ownership) owns |= review.EntityId is not null && await o.IsOwnerAsync(userId, review.EntityId, ct);
+        if (!owns) return new(DisputeFailure.NotOwner);
         if (await disputes.HasOpenForReviewAsync(reviewId, ct)) return new(DisputeFailure.AlreadyOpen);
 
         var dispute = new Dispute { ReviewId = review.Id, EntityId = review.EntityId, RaisedBy = userId, Reason = why, CreatedAt = time.GetUtcNow().UtcDateTime };

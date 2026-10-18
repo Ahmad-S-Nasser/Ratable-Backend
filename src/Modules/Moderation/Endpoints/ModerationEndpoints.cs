@@ -84,6 +84,7 @@ public static class ModerationEndpoints
             DisputeFailure.None => Results.Created("/api/moderation/disputes", new ReportedResponse(r.Dispute!.Id)),
             DisputeFailure.InvalidReason => Results.BadRequest(new ErrorBody("invalid_reason")),
             DisputeFailure.OwnReview => Results.BadRequest(new ErrorBody("own_review")),
+            DisputeFailure.NotOwner => Results.Json(new ErrorBody("not_owner"), statusCode: StatusCodes.Status403Forbidden),
             DisputeFailure.AlreadyOpen => Results.Conflict(new ErrorBody("dispute_already_open")),
             _ => Results.NotFound(new ErrorBody("not_found")),
         };

@@ -10,18 +10,7 @@ namespace Ratable.Modules.Verification.Storage;
 /// audit log first, reads a file. Production can swap this for object storage behind the same interface; the local-disk version is for development
 /// and small installs.
 /// </summary>
-public interface IProofStorage
-{
-    Task SaveAsync(string key, byte[] content, CancellationToken cancellationToken = default);
-
-    /// <summary>The decrypted file, or null when it is not there (never stored, or already deleted).</summary>
-    Task<byte[]?> ReadAsync(string key, CancellationToken cancellationToken = default);
-
-    /// <summary>Deletes the file. Deleting a file that is already gone is fine.</summary>
-    Task DeleteAsync(string key, CancellationToken cancellationToken = default);
-
-    Task<bool> ExistsAsync(string key, CancellationToken cancellationToken = default);
-}
+public interface IProofStorage : Ratable.Shared.Storage.IPrivateFileStore;
 
 /// <summary>
 /// Files on local disk, outside any web root, encrypted at rest with AES-256-GCM (key from Verification__StorageKey, never in the repository).

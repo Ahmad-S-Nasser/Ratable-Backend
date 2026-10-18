@@ -25,6 +25,7 @@ public static class VerificationModule
         services.AddSingleton<IEntityMergeParticipant, VerificationMergeParticipant>();
 
         services.TryAddSingleton<IProofStorage, LocalDiskProofStorage>();
+        services.TryAddSingleton<Ratable.Shared.Storage.IPrivateFileStore>(sp => sp.GetRequiredService<IProofStorage>());
         services.TryAddSingleton<IProofSampler, RandomProofSampler>();
         services.TryAddSingleton<IPresenceProofService, UnavailablePresenceProofService>();
         services.AddSingleton<ProofChecker>();

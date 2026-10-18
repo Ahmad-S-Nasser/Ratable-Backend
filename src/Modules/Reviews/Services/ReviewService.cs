@@ -4,6 +4,7 @@ using MongoDB.Driver;
 using Ratable.Modules.Reviews.Data;
 using Ratable.Modules.Reviews.Models;
 using Ratable.Modules.Reviews.Scoring;
+using Ratable.Shared.Businesses;
 using Ratable.Shared.Catalog;
 using Ratable.Shared.Content;
 using Ratable.Shared.Moderation;
@@ -20,6 +21,8 @@ public enum ReviewFailure
 {
     None,
     EntityNotFound,
+    /// <summary>The account runs this place. A business cannot review its own entity.</summary>
+    OwnEntity,
     NoAnswers,
     InvalidAnswer,
     DuplicateCriterion,
@@ -47,6 +50,7 @@ public sealed class ReviewService(
     TimeProvider time,
     IEnumerable<IReviewDeletedHandler> deletedHandlers,
     IModerationIntake moderation,
+    IEnumerable<IEntityOwnership> ownership,
     ILogger<ReviewService> logger)
 {
     public const int MaxTextLength = 4000;
@@ -58,6 +62,9 @@ public sealed class ReviewService(
         var entity = await catalog.GetActiveEntityAsync(entityId, ct);
         var category = entity is null ? null : await catalog.GetCategoryAsync(entity.CategoryId, ct);
         if (entity is null || category is null) return new(ReviewFailure.EntityNotFound);
+
+        foreach (var o in ownership)
+            if (await o.IsOwnerAsync(userId, entity.Id, ct)) return new(ReviewFailure.OwnEntity);
 
         var content = Validate(category, input);
         if (content.Failure != ReviewFailure.None) return new(content.Failure, Detail: content.Detail);
