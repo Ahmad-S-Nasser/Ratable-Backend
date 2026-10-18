@@ -98,7 +98,7 @@ public sealed class IndexRuleTests(MongoFixture fixture)
         await repo.ReverseAsync(earned, "Review removed");
         Assert.Equal(0, await repo.TotalPointsAsync(user));
 
-        await AssertDuplicateAsync(() => repo.ReverseAsync(earned, "Review removed again"));
+        Assert.False(await repo.ReverseAsync(earned, "Review removed again")); // a second reversal is refused by the unique index and writes nothing
         Assert.Equal(0, await repo.TotalPointsAsync(user));
     }
 

@@ -15,10 +15,20 @@ public sealed class ContributionEvent
     public string Action { get; set; } = "";
     [BsonRepresentation(BsonType.ObjectId)] public string? EntityId { get; set; }
     public int Points { get; set; }
+    /// <summary>A short code for why (the same as the action, or a reversal reason such as "review_hidden"). The web app turns it into words in the reader's language.</summary>
     public string Reason { get; set; } = "";
-    /// <summary>The review, comment or vote that earned the points.</summary>
+    /// <summary>The media item, verification or vote that earned the points.</summary>
     public string? Reference { get; set; }
+    /// <summary>The review everything came from, so one review being hidden or deleted can cancel all of it.</summary>
+    public string? RootReference { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     /// <summary>Set on a reversal entry: the id of the entry it cancels.</summary>
     [BsonRepresentation(BsonType.ObjectId)] public string? ReversesEventId { get; set; }
+}
+
+/// <summary>The rank a person last saw, so the rank-up moment is shown once.</summary>
+public sealed class RankSeen
+{
+    [BsonId, BsonRepresentation(BsonType.ObjectId)] public string UserId { get; set; } = "";
+    public string RankId { get; set; } = "";
 }

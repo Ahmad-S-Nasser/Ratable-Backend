@@ -247,4 +247,35 @@ public sealed class MediaPublicTests
         Assert.Equal(1, media.GetProperty("count").GetInt32());
         Assert.NotNull(item);
     }
+    [MongoFact]
+    public async Task Approved_media_earns_points_and_removed_media_takes_them_back()
+    {
+        using var s = NewSetup();
+        await using var api = s.Api;
+        var author = await api.SignInAsync("+201111111111");
+        var admin = await Moderator(s);
+        var review = await NewPlaceAndReview(s, author);
+        var ledger = api.Services.GetRequiredService<Ratable.Modules.Contributions.Data.ContributionRepository>();
+        var userId = IdOf(author);
+
+        var photo = await UploadWhole(s, author.Cookie!, review, "Photo", "image/jpeg", Jpeg());
+        api.Ai.Enqueue(new PhotoAnalysis(0, 0, 0, false, false, false, 0.9, []));
+        await s.Pipeline.ProcessAsync((await s.Items.ClaimNextUploadedAsync())!);
+        Assert.Equal(0, await ledger.TotalPointsAsync(userId)); // waiting for a person earns nothing
+        await Send(api, HttpMethod.Post, $"/api/moderation/media/{photo.Id}/approve", admin.Cookie);
+        Assert.Equal(5, await ledger.TotalPointsAsync(userId));
+
+        var video = await UploadWhole(s, author.Cookie!, review, "Video", "video/mp4", Mp4());
+        api.Ai.Enqueue(Clean());
+        api.Ai.Enqueue(Speech());
+        await s.Pipeline.ProcessAsync((await s.Items.ClaimNextUploadedAsync())!);
+        await Send(api, HttpMethod.Post, $"/api/moderation/media/{video.Id}/approve", admin.Cookie);
+        Assert.Equal(25, await ledger.TotalPointsAsync(userId));
+
+        // A moderator removes the video later, or the author deletes the photo: the points go with them.
+        await Send(api, HttpMethod.Post, $"/api/moderation/media/{video.Id}/reject", admin.Cookie, new { reason = "Shows a private address" });
+        Assert.Equal(5, await ledger.TotalPointsAsync(userId));
+        await Send(api, HttpMethod.Delete, $"/api/me/media/{photo.Id}", author.Cookie);
+        Assert.Equal(0, await ledger.TotalPointsAsync(userId));
+    }
 }

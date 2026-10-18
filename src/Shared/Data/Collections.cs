@@ -18,6 +18,9 @@ public static class Collections
     public const string AuditLog = "audit_log";
     public const string ModerationCases = "moderation_cases";
     public const string Disputes = "disputes";
+    public const string RankSeen = "rank_seen";
+    public const string ReviewVotes = "review_votes";
+    public const string Areas = "areas";
     public const string CollectionLists = "collection_lists";
     public const string MediaItems = "media_items";
     public const string AiCalls = "ai_calls";

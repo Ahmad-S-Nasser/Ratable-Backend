@@ -4,6 +4,7 @@ using Ratable.Modules.Media.Models;
 using Ratable.Modules.Media.Processing;
 using Ratable.Modules.Media.Storage;
 using Ratable.Shared.Content;
+using Ratable.Shared.Rewards;
 
 namespace Ratable.Modules.Media.Services;
 
@@ -21,7 +22,8 @@ public sealed record MediaResult(MediaFailure Failure, MediaItem? Item = null, l
 
 /// <summary>The author's side of media: ask for an upload address, send the file in pieces (and resume), see the state, choose a cover, delete.</summary>
 public sealed class MediaService(
-    MediaRepository items, IMediaStorage storage, UploadTokens tokens, IEnumerable<IContentDirectory> directories, IOptions<MediaOptions> options, TimeProvider time)
+    MediaRepository items, IMediaStorage storage, UploadTokens tokens, IEnumerable<IContentDirectory> directories, IOptions<MediaOptions> options, TimeProvider time,
+    IEnumerable<IContributionRecorder> recorders)
 {
     private MediaOptions Opt => options.Value;
 
@@ -158,6 +160,7 @@ public sealed class MediaService(
         if (item is null || item.UserId != userId) return new(MediaFailure.NotFound);
         await storage.DeleteAllAsync(item.StorageKey, ct);
         await items.DeleteAsync(item.Id, ct);
+        foreach (var recorder in recorders) await recorder.ReverseReferenceAsync(item.Id, "media_removed", ct);
         return new(MediaFailure.None);
     }
 

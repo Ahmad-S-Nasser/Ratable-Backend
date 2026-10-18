@@ -1,12 +1,13 @@
 using MongoDB.Driver;
 using Ratable.Modules.Reviews.Models;
 using Ratable.Shared.Data;
+using Ratable.Shared.Rewards;
 using Ratable.Shared.Verification;
 
 namespace Ratable.Modules.Reviews.Data;
 
 /// <summary>Sets or clears the Verified level on a review. It changes only the verification fields: not the status, not the revision, not the text.</summary>
-public sealed class ReviewVerifier(IMongoDatabase database) : IReviewVerifier
+public sealed class ReviewVerifier(IMongoDatabase database, IEnumerable<IContributionRecorder> recorders) : IReviewVerifier
 {
     private readonly IMongoCollection<Review> _reviews = database.GetCollection<Review>(Collections.Reviews);
 
@@ -15,7 +16,11 @@ public sealed class ReviewVerifier(IMongoDatabase database) : IReviewVerifier
         if (!MongoDB.Bson.ObjectId.TryParse(reviewId, out _)) return false;
         var result = await _reviews.UpdateOneAsync(r => r.Id == reviewId,
             Builders<Review>.Update.Set(r => r.Verification, new ReviewVerification { Level = VerificationLevel.Verified, Method = method, VerifiedAt = verifiedAt }), cancellationToken: ct);
-        return result.MatchedCount == 1;
+        if (result.MatchedCount != 1) return false;
+        var review = await _reviews.Find(r => r.Id == reviewId).Project(r => new { r.UserId, r.EntityId }).FirstOrDefaultAsync(ct);
+        if (review is not null)
+            foreach (var recorder in recorders) await recorder.RecordAsync(review.UserId, ContributionActions.VerifiedVisit, $"{reviewId}:verified", reviewId, review.EntityId, cancellationToken: ct);
+        return true;
     }
 
     public async Task<bool> SetUnverifiedAsync(string reviewId, CancellationToken ct = default)
@@ -23,6 +28,7 @@ public sealed class ReviewVerifier(IMongoDatabase database) : IReviewVerifier
         if (!MongoDB.Bson.ObjectId.TryParse(reviewId, out _)) return false;
         var result = await _reviews.UpdateOneAsync(r => r.Id == reviewId,
             Builders<Review>.Update.Set(r => r.Verification, new ReviewVerification { Level = VerificationLevel.Unverified }), cancellationToken: ct);
+        if (result.MatchedCount == 1) foreach (var recorder in recorders) await recorder.ReverseReferenceAsync($"{reviewId}:verified", "proof_rejected", ct);
         return result.MatchedCount == 1;
     }
 }

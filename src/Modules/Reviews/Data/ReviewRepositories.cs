@@ -78,6 +78,10 @@ public sealed class ReviewRepository(IMongoDatabase database) : MongoRepository<
         return [.. ids.Distinct().Take(limit)];
     }
 
+    /// <summary>How many other reviews of this entity are public. Zero means this one is the first.</summary>
+    public Task<long> CountOtherPublishedAsync(string entityId, string exceptReviewId, CancellationToken ct = default) =>
+        Collection.CountDocumentsAsync(r => r.EntityId == entityId && r.Status == ReviewStatus.Published && r.Id != exceptReviewId, cancellationToken: ct);
+
     public Task<long> CountPublishedAsync(string entityId, CancellationToken ct = default) =>
         Collection.CountDocumentsAsync(r => r.EntityId == entityId && r.Status == ReviewStatus.Published, cancellationToken: ct);
 

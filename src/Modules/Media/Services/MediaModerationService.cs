@@ -4,6 +4,7 @@ using Ratable.Modules.Media.Models;
 using Ratable.Modules.Media.Storage;
 using Ratable.Shared.Audit;
 using Ratable.Shared.Content;
+using Ratable.Shared.Rewards;
 
 namespace Ratable.Modules.Media.Services;
 
@@ -19,7 +20,8 @@ public sealed record ModerationResult(ModerationFailure Failure, MediaItem? Item
 /// a video that was not protected for an anonymous author, a photo showing faces or number plates (there is no automatic blur for photos yet).
 /// Every look at a file and every decision is written to the audit log.
 /// </summary>
-public sealed partial class MediaModerationService(MediaRepository items, IMediaStorage storage, IEnumerable<IContentDirectory> directories, IAuditLog audit, TimeProvider time)
+public sealed partial class MediaModerationService(
+    MediaRepository items, IMediaStorage storage, IEnumerable<IContentDirectory> directories, IAuditLog audit, TimeProvider time, IEnumerable<IContributionRecorder> recorders)
 {
     [GeneratedRegex(@"^(poster(_[0-9])?\.jpg|image\.[a-z0-9]+|stream/(index|v[0-9])\.m3u8|stream/v[0-9]_seg_[0-9]{3}\.ts)$")]
     private static partial Regex PreviewFile();
@@ -68,6 +70,8 @@ public sealed partial class MediaModerationService(MediaRepository items, IMedia
         if (item.Kind == MediaKind.Video)
             for (var i = 0; i < item.CandidateFrames; i++) await storage.DeleteFileAsync(item.StorageKey, $"poster_{i}.jpg", ct);
         await audit.AppendAsync(new AuditRecord(moderatorId, "media.approved", "media", item.Id, "Approved"), ct);
+        foreach (var recorder in recorders)
+            await recorder.RecordAsync(item.UserId, item.Kind == MediaKind.Video ? ContributionActions.Video : ContributionActions.Photo, item.Id, item.ReviewId, review.EntityId, cancellationToken: ct);
         return new(ModerationFailure.None, item);
     }
 
@@ -90,6 +94,7 @@ public sealed partial class MediaModerationService(MediaRepository items, IMedia
         item.DecidedBy = moderatorId;
         await items.ReplaceAsync(item, ct);
         await audit.AppendAsync(new AuditRecord(moderatorId, "media.rejected", "media", item.Id, reason.Trim()), ct);
+        foreach (var recorder in recorders) await recorder.ReverseReferenceAsync(item.Id, "media_removed", ct);
         return new(ModerationFailure.None, item);
     }
 }
