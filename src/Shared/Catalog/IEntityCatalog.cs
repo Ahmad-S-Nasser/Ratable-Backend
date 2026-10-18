@@ -34,6 +34,9 @@ public interface IEntityCatalog
     /// <summary>Public entities by id, for listings. Ids that are not public are left out.</summary>
     Task<IReadOnlyList<CatalogEntry>> GetActiveEntriesAsync(IReadOnlyCollection<string> entityIds, CancellationToken cancellationToken = default);
 
+    /// <summary>Public entities changed since a moment, for telling search engines which pages changed.</summary>
+    Task<IReadOnlyList<CatalogEntry>> ListUpdatedSinceAsync(DateTime since, int limit, CancellationToken cancellationToken = default);
+
     /// <summary>The category's criteria, only if the category is active.</summary>
     Task<CategoryInfo?> GetCategoryAsync(string categoryId, CancellationToken cancellationToken = default);
 }

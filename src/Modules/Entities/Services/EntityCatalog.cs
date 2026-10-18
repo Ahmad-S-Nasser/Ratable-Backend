@@ -26,6 +26,12 @@ public sealed class EntityCatalog(EntityRepository entities, CategoryRepository 
         return [.. found.Select(e => new CatalogEntry(e.Id, e.CategoryId, e.Name, e.Slugs, e.City, e.Address, e.UpdatedAt))];
     }
 
+    public async Task<IReadOnlyList<CatalogEntry>> ListUpdatedSinceAsync(DateTime since, int limit, CancellationToken ct = default)
+    {
+        var found = await entities.ListActiveUpdatedSinceAsync(since, limit, ct);
+        return [.. found.Select(e => new CatalogEntry(e.Id, e.CategoryId, e.Name, e.Slugs, e.City, e.Address, e.UpdatedAt))];
+    }
+
     public async Task<CategoryInfo?> GetCategoryAsync(string categoryId, CancellationToken ct = default)
     {
         var category = await categories.GetAsync(categoryId, ct);

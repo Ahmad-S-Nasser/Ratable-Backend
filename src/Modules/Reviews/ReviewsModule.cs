@@ -26,6 +26,11 @@ public static class ReviewsModule
         services.AddSingleton<IReviewVerifier, ReviewVerifier>();
         services.AddSingleton<IContentModerator, ReviewContentModerator>();
         services.AddSingleton<ReviewService>();
+        services.Configure<Seo.SeoOptions>(configuration.GetSection("Seo"));
+        services.AddHttpClient();
+        services.AddSingleton<Seo.PlaceChangeFeed>();
+        services.AddSingleton<Seo.SeoNotifier>();
+        services.AddHostedService(sp => sp.GetRequiredService<Seo.SeoNotifier>());
         return services;
     }
 }

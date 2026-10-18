@@ -71,6 +71,13 @@ public sealed class ReviewRepository(IMongoDatabase database) : MongoRepository<
         return [.. groups.Select(g => (g.EntityId, g.LastChange))];
     }
 
+    /// <summary>The entities whose reviews changed since a moment (published, edited, hidden, or verification changed).</summary>
+    public async Task<List<string>> ListEntityIdsChangedSinceAsync(DateTime since, int limit, CancellationToken ct = default)
+    {
+        var ids = await Collection.Find(r => r.UpdatedAt > since).Project(r => r.EntityId).ToListAsync(ct);
+        return [.. ids.Distinct().Take(limit)];
+    }
+
     public Task<long> CountPublishedAsync(string entityId, CancellationToken ct = default) =>
         Collection.CountDocumentsAsync(r => r.EntityId == entityId && r.Status == ReviewStatus.Published, cancellationToken: ct);
 
