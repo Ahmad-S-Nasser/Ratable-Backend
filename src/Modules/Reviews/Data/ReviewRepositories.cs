@@ -57,7 +57,7 @@ public sealed class ReviewRepository(IMongoDatabase database) : MongoRepository<
     /// <summary>The answers of every counting review (Published and Verified) of several entities at once, for listings.</summary>
     public async Task<List<Review>> ListScoringForEntitiesAsync(IReadOnlyCollection<string> entityIds, CancellationToken ct = default) =>
         await Collection.Find(r => entityIds.Contains(r.EntityId) && r.Status == ReviewStatus.Published && r.Verification.Level == VerificationLevel.Verified)
-            .Project<Review>(Builders<Review>.Projection.Include(r => r.EntityId).Include(r => r.Answers).Include(r => r.Status).Include(r => r.Verification))
+            .Project<Review>(Builders<Review>.Projection.Include(r => r.EntityId).Include(r => r.Answers).Include(r => r.Status).Include(r => r.Verification).Include(r => r.UpdatedAt))
             .ToListAsync(ct);
 
     /// <summary>The entities that have at least one counting review, in id order, with the time of their latest review change. For the sitemap.</summary>

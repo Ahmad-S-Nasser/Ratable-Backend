@@ -41,7 +41,7 @@ public sealed record CriterionScoreDto(string CriterionId, int Answers, double? 
 public sealed record ScoreResponse(double? Overall, int VerifiedReviews, int PublishedReviews, int MinAnswersForCriterion, List<CriterionScoreDto> Criteria);
 
 /// <summary>A place in a category listing: its verified score and how many verified reviews that is built from. Nothing here depends on payment.</summary>
-public sealed record PlaceCard(string Id, LocalizedText Name, Dictionary<string, string> Slugs, string? City, double? Overall, int VerifiedReviews);
+public sealed record PlaceCard(string Id, LocalizedText Name, Dictionary<string, string> Slugs, string? City, double? Overall, int VerifiedReviews, DateTime LastModified);
 
 public sealed record PlaceList(List<PlaceCard> Places, int Total);
 
@@ -82,7 +82,8 @@ public static class ReviewEndpoints
             .Select(e =>
             {
                 var score = ScoreCalculator.ForEntity(reviews[e.Id]);
-                return new PlaceCard(e.Id, e.Name, new Dictionary<string, string>(e.Slugs), e.City, score.Overall, score.VerifiedReviewCount);
+                var latest = reviews[e.Id].Select(x => x.UpdatedAt).DefaultIfEmpty(DateTime.MinValue).Max();
+                return new PlaceCard(e.Id, e.Name, new Dictionary<string, string>(e.Slugs), e.City, score.Overall, score.VerifiedReviewCount, e.UpdatedAt > latest ? e.UpdatedAt : latest);
             })
             .OrderByDescending(p => p.Overall.HasValue).ThenByDescending(p => p.Overall).ThenByDescending(p => p.VerifiedReviews)
             .ThenBy(p => key == "en" ? p.Name.En ?? p.Name.Ar : p.Name.Ar ?? p.Name.En, StringComparer.CurrentCulture)
